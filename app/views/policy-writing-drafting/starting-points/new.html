@@ -1,0 +1,46 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% set pageName = "Add a starting point" %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({
+  items: [
+    { text: "Home", href: "/policy-writing-drafting" },
+    { text: "Review starting points", href: "/policy-writing-drafting/starting-points" },
+    { text: "Add a starting point" }
+  ]
+}) }}
+
+<div class="dlp-pd-measure">
+  <h1 class="govuk-heading-xl">Add a starting point</h1>
+
+  <form method="post" action="/policy-writing-drafting/starting-points/new">
+    {{ govukInput({
+      label: { text: "Starting point", classes: "govuk-label--m" },
+      hint: { text: "An area this local plan needs to address, for example Climate Resilience." },
+      id: "pd-starting-point-name",
+      name: "_startingPointName"
+    }) }}
+
+    {% set sourceItems = [] %}
+    {% for source in sources %}
+      {% set sourceItems = (sourceItems.push({ value: source, text: source, checked: loop.first }), sourceItems) %}
+    {% endfor %}
+    {{ govukRadios({
+      name: "_startingPointSource",
+      fieldset: { legend: { text: "Where has it come from?", classes: "govuk-fieldset__legend--m" } },
+      items: sourceItems
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Add starting point" }) }}
+      <a class="govuk-link" href="/policy-writing-drafting/starting-points">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

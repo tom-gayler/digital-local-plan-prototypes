@@ -17,6 +17,9 @@
   params.sections[].items[].status: string (optional) — one of "Completed" | "In progress" |
     "Not started" | "Cannot start" | "Action required", rendered as the matching status icon
     (see partials/icons/status-icon.html — adapted from BOPS). Anything else renders no icon.
+  params.sections[].items[].children: array (optional) — items nested under this one, same
+    shape as items (one level deep). Used where a list item is itself a group of steps, e.g. a
+    chapter and its drafting steps.
   params.title: string (optional) — heading shown above all sections, e.g. the name of the
     document the sections navigate (omit for none).
   params.ariaLabel: string (optional) — defaults to "Task navigation"
@@ -24,6 +27,27 @@
 #}
 
 {% from "partials/icons/status-icon.html" import statusIcon %}
+
+{% macro navItem(item) %}
+  <li class="app-side-navigation__item {%- if item.active %} app-side-navigation__item--active{% endif %} {%- if item.children %} app-side-navigation__item--parent{% endif %}">
+    {% if item.status %}
+      <span class="app-side-navigation__icon">{{ statusIcon(item.status) }}</span>
+    {% endif %}
+    <a class="govuk-link govuk-link--no-visited-state app-side-navigation__link"
+       href="{{ item.href }}"
+       {%- if item.newTab %} target="_blank" rel="noopener noreferrer"{% endif %}
+       {%- if item.active %} aria-current="page"{% endif %}>
+      {{ item.text }}{% if item.newTab %}<span class="govuk-visually-hidden"> (opens in a new tab)</span>{% endif %}
+    </a>
+    {% if item.children %}
+      <ul class="app-side-navigation__list app-side-navigation__list--nested">
+        {% for child in item.children %}
+          {{ navItem(child) }}
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </li>
+{% endmacro %}
 
 {% macro appSideNavigation(params) %}
 <nav class="app-side-navigation {%- if params.classes %} {{ params.classes }}{% endif %}"
@@ -45,17 +69,7 @@
       {% endif %}
       <ul class="app-side-navigation__list">
         {% for item in section.items %}
-          <li class="app-side-navigation__item {%- if item.active %} app-side-navigation__item--active{% endif %}">
-            {% if item.status %}
-              <span class="app-side-navigation__icon">{{ statusIcon(item.status) }}</span>
-            {% endif %}
-            <a class="govuk-link govuk-link--no-visited-state app-side-navigation__link"
-               href="{{ item.href }}"
-               {%- if item.newTab %} target="_blank" rel="noopener noreferrer"{% endif %}
-               {%- if item.active %} aria-current="page"{% endif %}>
-              {{ item.text }}{% if item.newTab %}<span class="govuk-visually-hidden"> (opens in a new tab)</span>{% endif %}
-            </a>
-          </li>
+          {{ navItem(item) }}
         {% endfor %}
       </ul>
     </div>

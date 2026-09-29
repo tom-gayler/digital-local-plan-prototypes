@@ -1,0 +1,72 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% set pageName = "Manage chapters" %}
+
+{% set statusColours = { "Not started": "grey", "In progress": "light-blue", "Completed": "green" } %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({
+  items: [
+    { text: "Home", href: "/policy-writing-drafting" },
+    { text: "Manage chapters" }
+  ]
+}) }}
+
+<h1 class="govuk-heading-xl">Manage chapters</h1>
+
+<div class="dlp-pd-measure">
+  <p class="govuk-body">We've created chapters based on your starting points.</p>
+
+  <p class="govuk-body">Select a chapter to:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>add or edit chapter brief</li>
+    <li>assign issue to another chapter.</li>
+  </ul>
+
+  <p class="govuk-body">Once you've added chapters, you can:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>allocate evidence requirements in the Evidence panel</li>
+    <li>assign officers to manage and draft each chapter</li>
+    <li>link evidence sources, consultation responses and other information to each policy or chapter</li>
+  </ul>
+</div>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<table class="govuk-table dlp-pd-table dlp-pd-table--compact">
+  <caption class="govuk-table__caption govuk-visually-hidden">Chapters</caption>
+  <thead class="govuk-table__head dlp-pd-table__head--shaded">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header">Chapter name</th>
+      <th scope="col" class="govuk-table__header">Status</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for chapter in chapters %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">
+          <a class="govuk-link govuk-!-font-weight-bold" href="/policy-writing-drafting/chapters/{{ chapter.id }}/brief">{{ chapter.name }}</a>
+        </td>
+        <td class="govuk-table__cell">
+          <strong class="govuk-tag govuk-tag--{{ statusColours[chapter.status] }}">{{ chapter.status }}</strong>
+        </td>
+      </tr>
+    {% else %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell" colspan="2">
+          No chapters yet. <a class="govuk-link" href="/policy-writing-drafting/starting-points">Include some starting points</a> or add a chapter.
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="/policy-writing-drafting/chapters">
+  <div class="govuk-button-group">
+    {{ govukButton({ text: "Save" }) }}
+    {{ govukButton({ text: "Add new chapter", classes: "govuk-button--secondary", href: "/policy-writing-drafting/chapters/new" }) }}
+  </div>
+</form>
+
+{% endblock %}

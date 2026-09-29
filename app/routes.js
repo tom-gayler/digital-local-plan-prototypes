@@ -1607,3 +1607,621 @@ router.get('/gateway-2-progress-check/evidence/:source', (req, res) => {
     statusColours: EVIDENCE_STATUS_COLOURS
   })
 })
+
+// --- Policy drafting with starting points ---
+//
+// Built from the Figma designs for this journey (see CLAUDE.md). Two phases:
+//   /policy-writing-drafting/starting-points      - review starting points (include/remove)
+//   /policy-writing-drafting/chapters             - chapters made from them, and their briefs
+//   /policy-writing-drafting/chapters/:id/<step>  - per-chapter steps, in CHAPTER_STEPS order
+//
+// Slug note: a sibling of /policy-writing rather than nested in it, for the same reason as
+// policy-writing-v2 — nested, the segment would be caught by router.param('variant', ...).
+//
+// Everything the user changes is in req.session.data.policyDrafting, read only through
+// getPolicyDrafting. Static reference content (officers, evidence library, viewer extracts) is in
+// app/data/policy-drafting.js. Form fields holding free text are named with a leading "_" so
+// the kit's session middleware doesn't copy them into the top level of session data as well.
+
+const {
+  OFFICERS,
+  NPPF_URL,
+  getRequirementsForChapter,
+  LIBRARY_STATUS_COLOURS,
+  SOURCE_TYPES,
+  PLANNING_DESIGNATIONS,
+  SITES,
+  getLibrarySource,
+  searchLibrary,
+  getLibrarySearchTerms,
+  getViewerContent,
+  getConsultationsForChapter,
+  getSuggestedPolicyAreas
+} = require('./data/policy-drafting.js')
+
+const PD = '/policy-writing-drafting'
+const POLICY_DRAFTING_SCHEMA_VERSION = 2
+const PD_RESULTS_PER_PAGE = 10
+
+function ensurePolicyDraftingShape (req) {
+  if (req.session.data.policyDraftingSchemaVersion !== POLICY_DRAFTING_SCHEMA_VERSION) {
+    req.session.data.policyDrafting = JSON.parse(JSON.stringify(sessionDataDefaults.policyDrafting))
+    req.session.data.policyDraftingOwned = true
+    req.session.data.policyDraftingSchemaVersion = POLICY_DRAFTING_SCHEMA_VERSION
+  }
+}
+
+function getPolicyDrafting (req) {
+  ensurePolicyDraftingShape(req)
+  if (!req.session.data.policyDraftingOwned) {
+    req.session.data.policyDrafting = JSON.parse(JSON.stringify(req.session.data.policyDrafting))
+    req.session.data.policyDraftingOwned = true
+  }
+  return req.session.data.policyDrafting
+}
+
+// The per-chapter steps, in sidebar order. `done` decides the step's status icon, and together
+// they decide the chapter's status on the chapters list.
+const CHAPTER_STEPS = [
+  { slug: 'officers', label: 'Assign officers', done: chapter => chapter.officers.length > 0 },
+  { slug: 'explanatory-text', label: 'Add explanatory text', done: chapter => Boolean(chapter.explanatoryText.trim()) },
+  { slug: 'sources', label: 'Add sources', done: chapter => chapter.sources.length > 0 },
+  { slug: 'policies', label: 'Manage policies', done: chapter => Boolean(chapter.policiesConfirmed) },
+  { slug: 'draft', label: 'Draft policy', done: chapter => Object.keys(chapter.drafts).length > 0 },
+  { slug: 'export', label: 'Share and publish', done: chapter => chapter.exports.length > 0 }
+]
+
+const pdChapterUrl = (chapter, step) => PD + '/chapters/' + chapter.id + '/' + step
+
+function chapterStatus (chapter) {
+  const done = CHAPTER_STEPS.filter(step => step.done(chapter)).length
+  if (done === 0) return 'Not started'
+  return done === CHAPTER_STEPS.length ? 'Completed' : 'In progress'
+}
+
+function newChapter (id, name, startingPointIds) {
+  return {
+    id,
+    name,
+    startingPointIds,
+    brief: '',
+    officers: [],
+    explanatoryText: '',
+    sources: [],
+    policyAreas: null,
+    drafts: {},
+    exports: []
+  }
+}
+
+function uniqueChapterId (data, base) {
+  const slug = String(base).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'chapter'
+  let id = slug
+  let n = 2
+  while (data.chapters.some(chapter => chapter.id === id)) id = slug + '-' + n++
+  return id
+}
+
+// Keeps the chapters in step with the starting points once they're reviewed: an included
+// starting point with no chapter gets one, and a chapter left with none of its starting points
+// is removed — unless work has started on it, which is never thrown away. Chapters added by hand
+// (never had a starting point) are left alone.
+function syncChaptersWithStartingPoints (data) {
+  const included = data.startingPoints.filter(point => point.included)
+  const includedIds = included.map(point => point.id)
+
+  data.chapters = data.chapters.filter(chapter => {
+    const hadStartingPoints = chapter.startingPointIds.length > 0
+    chapter.startingPointIds = chapter.startingPointIds.filter(id => includedIds.includes(id))
+    const orphaned = hadStartingPoints && chapter.startingPointIds.length === 0
+    return !(orphaned && chapterStatus(chapter) === 'Not started' && !chapter.brief)
+  })
+
+  included.forEach(point => {
+    const covered = data.chapters.some(chapter => chapter.startingPointIds.includes(point.id))
+    if (!covered) data.chapters.push(newChapter(uniqueChapterId(data, point.name), point.name, [point.id]))
+  })
+}
+
+// Materialises the suggested policy areas the first time a chapter's policies are touched, so
+// editing or adding one has a list to change.
+function ensurePolicyAreas (chapter) {
+  if (!Array.isArray(chapter.policyAreas)) {
+    chapter.policyAreas = getSuggestedPolicyAreas(chapter.name).map(area => ({
+      id: area.ref.toLowerCase(),
+      ref: area.ref,
+      name: area.name,
+      selected: true
+    }))
+  }
+  return chapter.policyAreas
+}
+
+function selectedPolicyAreas (chapter) {
+  return (chapter.policyAreas || []).filter(area => area.selected)
+}
+
+function pdTimestamp () {
+  return new Date().toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/London' })
+}
+
+// Sidebar: the starting points phase, then every chapter, with the current chapter's steps
+// nested under it (the shared side navigation's `children`).
+//
+// The chapters only appear once "Manage chapters" is complete — until then there are no
+// settled chapters to list. The exception is a page inside a chapter (reached from the landing
+// page's shortcut, say), which still needs its own steps to navigate by.
+function buildDraftingSidebar (data, active) {
+  const everyChapterHasBrief = data.chapters.length > 0 && data.chapters.every(chapter => chapter.brief.trim())
+  const firstWithoutBrief = data.chapters.find(chapter => !chapter.brief.trim())
+
+  const phaseItem = (key, text, href, done) => ({
+    text,
+    href,
+    active: active.page === key,
+    status: done ? 'Completed' : (active.page === key ? 'In progress' : 'Not started')
+  })
+
+  const sections = [
+    {
+      heading: 'Starting points',
+      items: [
+        phaseItem('review', 'Review starting points', PD + '/starting-points', data.reviewed),
+        phaseItem('chapters', 'Manage chapters', PD + '/chapters', data.chaptersConfirmed),
+        phaseItem('briefs', 'Add briefs',
+          firstWithoutBrief ? pdChapterUrl(firstWithoutBrief, 'brief') : PD + '/chapters',
+          everyChapterHasBrief)
+      ]
+    }
+  ]
+
+  if (!data.chaptersConfirmed && !active.chapterId) return sections
+
+  sections.push({
+    heading: 'Chapters',
+    items: data.chapters.map(chapter => {
+      const item = { text: chapter.name, href: pdChapterUrl(chapter, CHAPTER_STEPS[0].slug) }
+      if (chapter.id === active.chapterId) {
+        item.children = CHAPTER_STEPS.map(step => {
+          const isActive = step.slug === active.step
+          return {
+            text: step.label,
+            href: pdChapterUrl(chapter, step.slug),
+            active: isActive,
+            status: step.done(chapter) ? 'Completed' : (isActive ? 'In progress' : 'Not started')
+          }
+        })
+      }
+      return item
+    })
+  })
+  return sections
+}
+
+// Every chapter page needs the chapter, the sidebar and the breadcrumb root.
+function renderChapterPage (req, res, view, step, locals) {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  res.render('policy-writing-drafting/' + view, Object.assign({
+    chapter,
+    sidebarSections: buildDraftingSidebar(data, { chapterId: chapter.id, step, page: step === 'brief' ? 'briefs' : null })
+  }, locals))
+}
+
+// Loads the chapter for every /chapters/:pdChapterId/... route, and sends anything stale
+// (a merged or removed chapter) back to the list.
+router.param('pdChapterId', (req, res, next, id) => {
+  const chapter = getPolicyDrafting(req).chapters.find(candidate => candidate.id === id)
+  if (!chapter) return res.redirect(PD + '/chapters')
+  req.pdChapter = chapter
+  next()
+})
+
+router.get(PD, (req, res) => {
+  res.render('policy-writing-drafting/index', {
+    userStories: getUserStories(['POUS1', 'POUS3', 'POUS4'])
+  })
+})
+
+// --- Starting points ---
+
+router.get(PD + '/starting-points', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/starting-points/index', {
+    startingPoints: data.startingPoints,
+    sidebarSections: buildDraftingSidebar(data, { page: 'review' })
+  })
+})
+
+router.post(PD + '/starting-points', (req, res) => {
+  const data = getPolicyDrafting(req)
+  data.reviewed = true
+  syncChaptersWithStartingPoints(data)
+  res.redirect(PD + '/chapters')
+})
+
+router.post(PD + '/starting-points/:pointId/toggle', (req, res) => {
+  const point = getPolicyDrafting(req).startingPoints.find(candidate => candidate.id === req.params.pointId)
+  if (point) point.included = !point.included
+  res.redirect(PD + '/starting-points')
+})
+
+const STARTING_POINT_SOURCES = ['Adopted plan', 'New need', 'NPPF/SDS']
+
+router.get(PD + '/starting-points/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/starting-points/new', {
+    sources: STARTING_POINT_SOURCES,
+    sidebarSections: buildDraftingSidebar(data, { page: 'review' })
+  })
+})
+
+router.post(PD + '/starting-points/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const name = (req.body._startingPointName || '').trim()
+  if (name) {
+    data.startingPoints.push({
+      id: 'sp-' + Date.now(),
+      name,
+      source: STARTING_POINT_SOURCES.includes(req.body._startingPointSource) ? req.body._startingPointSource : 'New need',
+      included: true
+    })
+  }
+  res.redirect(PD + '/starting-points')
+})
+
+// --- Chapters and briefs ---
+
+router.get(PD + '/chapters', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/chapters/index', {
+    chapters: data.chapters.map(chapter => Object.assign({ status: chapterStatus(chapter) }, chapter)),
+    sidebarSections: buildDraftingSidebar(data, { page: 'chapters' })
+  })
+})
+
+router.post(PD + '/chapters', (req, res) => {
+  const data = getPolicyDrafting(req)
+  data.chaptersConfirmed = true
+  const next = data.chapters.find(chapter => !chapter.brief.trim()) || data.chapters[0]
+  res.redirect(next ? pdChapterUrl(next, 'brief') : PD + '/chapters')
+})
+
+router.get(PD + '/chapters/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/chapters/new', {
+    sidebarSections: buildDraftingSidebar(data, { page: 'chapters' })
+  })
+})
+
+router.post(PD + '/chapters/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const name = (req.body._chapterName || '').trim()
+  if (name) data.chapters.push(newChapter(uniqueChapterId(data, name), name, []))
+  res.redirect(PD + '/chapters')
+})
+
+router.get(PD + '/chapters/:pdChapterId/brief', (req, res) => {
+  const data = getPolicyDrafting(req)
+  renderChapterPage(req, res, 'chapters/brief', 'brief', {
+    chapters: data.chapters,
+    requirements: getRequirementsForChapter(req.pdChapter.name),
+    nppfUrl: NPPF_URL
+  })
+})
+
+// Saving the brief can also move the chapter into another one ("Assign to chapter"): its
+// starting points and brief go to the target, and this chapter is removed.
+router.post(PD + '/chapters/:pdChapterId/brief', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  chapter.brief = (req.body._brief || '').trim().slice(0, 500)
+
+  const target = data.chapters.find(candidate => candidate.id === req.body._assignTo)
+  if (target && target !== chapter) {
+    target.startingPointIds = target.startingPointIds.concat(chapter.startingPointIds)
+    if (chapter.brief) target.brief = [target.brief, chapter.brief].filter(Boolean).join('\n\n').slice(0, 500)
+    data.chapters = data.chapters.filter(candidate => candidate !== chapter)
+  }
+  res.redirect(PD + '/chapters')
+})
+
+// --- Chapter steps ---
+
+router.get(PD + '/chapters/:pdChapterId/officers', (req, res) => {
+  const chapter = req.pdChapter
+  renderChapterPage(req, res, 'chapter/officers', 'officers', {
+    assigned: chapter.officers.map(id => OFFICERS.find(officer => officer.id === id)).filter(Boolean),
+    available: OFFICERS.filter(officer => !chapter.officers.includes(officer.id))
+  })
+})
+
+router.post(PD + '/chapters/:pdChapterId/officers', (req, res) => {
+  const chapter = req.pdChapter
+  if (req.body._action === 'continue') return res.redirect(pdChapterUrl(chapter, 'explanatory-text'))
+
+  const officer = OFFICERS.find(candidate => candidate.id === req.body._officer)
+  if (officer && !chapter.officers.includes(officer.id)) chapter.officers.push(officer.id)
+  res.redirect(pdChapterUrl(chapter, 'officers'))
+})
+
+router.post(PD + '/chapters/:pdChapterId/officers/:officerId/remove', (req, res) => {
+  const chapter = req.pdChapter
+  chapter.officers = chapter.officers.filter(id => id !== req.params.officerId)
+  res.redirect(pdChapterUrl(chapter, 'officers'))
+})
+
+router.get(PD + '/chapters/:pdChapterId/explanatory-text', (req, res) => {
+  renderChapterPage(req, res, 'chapter/explanatory-text', 'explanatory-text', {
+    requirements: getRequirementsForChapter(req.pdChapter.name),
+    nppfUrl: NPPF_URL
+  })
+})
+
+router.post(PD + '/chapters/:pdChapterId/explanatory-text', (req, res) => {
+  const chapter = req.pdChapter
+  chapter.explanatoryText = (req.body._explanatoryText || '').trim()
+  res.redirect(pdChapterUrl(chapter, 'sources'))
+})
+
+// Search and filters are sticky in session (the kit stores req.query there), named pd* so they
+// can't collide with the evidence library's own evidenceSearch filter. The page number is
+// "_page" so it isn't sticky: a new search should start from the first page.
+router.get(PD + '/chapters/:pdChapterId/sources', (req, res) => {
+  const chapter = req.pdChapter
+  const session = req.session.data
+  const filters = {
+    query: session.pdSearch || '',
+    type: session.pdSourceType || '',
+    area: session.pdPolicyArea || '',
+    designation: session.pdDesignation || '',
+    site: session.pdSite || ''
+  }
+  const searched = Object.values(filters).some(Boolean)
+  const results = searched ? searchLibrary(filters) : []
+  const pageCount = Math.max(1, Math.ceil(results.length / PD_RESULTS_PER_PAGE))
+  const page = Math.min(pageCount, Math.max(1, parseInt(req.query._page, 10) || 1))
+  const start = (page - 1) * PD_RESULTS_PER_PAGE
+
+  renderChapterPage(req, res, 'chapter/sources', 'sources', {
+    chapterSources: chapter.sources.map(getLibrarySource).filter(Boolean),
+    filters,
+    searched,
+    results: results.slice(start, start + PD_RESULTS_PER_PAGE),
+    resultCount: results.length,
+    firstResult: results.length ? start + 1 : 0,
+    lastResult: Math.min(start + PD_RESULTS_PER_PAGE, results.length),
+    page,
+    pageCount,
+    statusColours: LIBRARY_STATUS_COLOURS,
+    searchTermsJson: JSON.stringify(getLibrarySearchTerms()),
+    // Set after "Add selected sources", for the confirmation banner.
+    addedCount: parseInt(req.query._added, 10) || 0,
+    sourceTypes: SOURCE_TYPES,
+    policyAreas: POLICY_AREAS,
+    designations: PLANNING_DESIGNATIONS,
+    sites: SITES
+  })
+})
+
+// Adding or removing keeps the user on the page of results they were on.
+function sourcesReturnUrl (chapter, page, extra) {
+  const params = []
+  const pageNumber = parseInt(page, 10)
+  if (pageNumber > 1) params.push('_page=' + pageNumber)
+  if (extra) params.push(extra)
+  return pdChapterUrl(chapter, 'sources') + (params.length ? '?' + params.join('&') : '')
+}
+
+// "Add selected sources": every ticked result in one go. Anything already on the chapter is
+// skipped, so the banner's count is what was actually added.
+router.post(PD + '/chapters/:pdChapterId/sources/add', (req, res) => {
+  const chapter = req.pdChapter
+  const incoming = asArray(req.body._sourceIds)
+    .filter(id => getLibrarySource(id) && !chapter.sources.includes(id))
+    .filter((id, index, all) => all.indexOf(id) === index)
+  chapter.sources.push(...incoming)
+  res.redirect(sourcesReturnUrl(chapter, req.body._page, incoming.length ? '_added=' + incoming.length : ''))
+})
+
+router.post(PD + '/chapters/:pdChapterId/sources/:sourceId/remove', (req, res) => {
+  const chapter = req.pdChapter
+  chapter.sources = chapter.sources.filter(id => id !== req.params.sourceId)
+  res.redirect(sourcesReturnUrl(chapter, req.body._page))
+})
+
+router.get(PD + '/chapters/:pdChapterId/policies', (req, res) => {
+  renderChapterPage(req, res, 'chapter/policies', 'policies', {
+    policyAreas: ensurePolicyAreas(req.pdChapter)
+  })
+})
+
+router.post(PD + '/chapters/:pdChapterId/policies', (req, res) => {
+  const chapter = req.pdChapter
+  const selected = asArray(req.body._policyAreas)
+  ensurePolicyAreas(chapter).forEach(area => { area.selected = selected.includes(area.id) })
+  chapter.policiesConfirmed = true
+  res.redirect(pdChapterUrl(chapter, 'draft'))
+})
+
+// One form for both editing a policy area and adding a policy.
+router.get(PD + '/chapters/:pdChapterId/policies/new', (req, res) => {
+  renderChapterPage(req, res, 'chapter/policy-area', 'policies', { policyArea: null })
+})
+
+router.get(PD + '/chapters/:pdChapterId/policies/:areaId/edit', (req, res) => {
+  const policyArea = ensurePolicyAreas(req.pdChapter).find(area => area.id === req.params.areaId)
+  if (!policyArea) return res.redirect(pdChapterUrl(req.pdChapter, 'policies'))
+  renderChapterPage(req, res, 'chapter/policy-area', 'policies', { policyArea })
+})
+
+router.post(PD + '/chapters/:pdChapterId/policies/new', (req, res) => {
+  const chapter = req.pdChapter
+  const ref = (req.body._policyRef || '').trim()
+  const name = (req.body._policyName || '').trim()
+  if (name) {
+    ensurePolicyAreas(chapter).push({
+      id: 'pa-' + Date.now(),
+      ref,
+      name,
+      selected: true
+    })
+  }
+  res.redirect(pdChapterUrl(chapter, 'policies'))
+})
+
+router.post(PD + '/chapters/:pdChapterId/policies/:areaId/edit', (req, res) => {
+  const chapter = req.pdChapter
+  const policyArea = ensurePolicyAreas(chapter).find(area => area.id === req.params.areaId)
+  if (policyArea) {
+    policyArea.ref = (req.body._policyRef || '').trim() || policyArea.ref
+    policyArea.name = (req.body._policyName || '').trim() || policyArea.name
+  }
+  res.redirect(pdChapterUrl(chapter, 'policies'))
+})
+
+// The sources the evidence viewer can show: the chapter's own, plus any consultation summary
+// that covers this chapter.
+function viewerSourcesFor (chapter) {
+  return chapter.sources
+    .concat(getConsultationsForChapter(chapter.name))
+    .filter((id, index, all) => all.indexOf(id) === index)
+    .map(getLibrarySource)
+    .filter(Boolean)
+}
+
+function viewerLocals (chapter, sourceId) {
+  const viewerSources = viewerSourcesFor(chapter)
+  const viewerSource = viewerSources.find(source => source.id === sourceId) || viewerSources[0] || null
+  return {
+    viewerSources,
+    viewerSource,
+    viewerContent: viewerSource ? getViewerContent(viewerSource.id) : null
+  }
+}
+
+router.get(PD + '/chapters/:pdChapterId/draft', (req, res) => {
+  const chapter = req.pdChapter
+  const areas = selectedPolicyAreas(chapter)
+  const policyArea = areas.find(area => area.id === req.query._policy) || areas[0] || null
+
+  renderChapterPage(req, res, 'chapter/draft', 'draft', Object.assign({
+    policyAreas: areas,
+    policyArea,
+    draft: (policyArea && chapter.drafts[policyArea.id]) || {}
+  }, viewerLocals(chapter, req.query._source)))
+})
+
+router.post(PD + '/chapters/:pdChapterId/draft/:areaId', (req, res) => {
+  const chapter = req.pdChapter
+  const policyArea = selectedPolicyAreas(chapter).find(area => area.id === req.params.areaId)
+  if (policyArea) {
+    chapter.drafts[policyArea.id] = {
+      title: (req.body._policyTitle || '').trim(),
+      context: (req.body._policyContext || '').trim(),
+      detail: (req.body._policyDetail || '').trim(),
+      strategic: req.body._strategic === 'yes',
+      savedAt: pdTimestamp()
+    }
+  }
+  const query = '?_policy=' + encodeURIComponent(req.params.areaId) +
+    (req.body._source ? '&_source=' + encodeURIComponent(req.body._source) : '')
+  res.redirect(pdChapterUrl(chapter, 'draft') + query)
+})
+
+// The evidence viewer on a page of its own, for "Open in new window".
+router.get(PD + '/chapters/:pdChapterId/viewer', (req, res) => {
+  res.render('policy-writing-drafting/chapter/viewer', Object.assign({
+    chapter: req.pdChapter
+  }, viewerLocals(req.pdChapter, req.query._source)))
+})
+
+// What can be viewed or exported: each drafted-for policy in this chapter, the chapter, or the
+// whole plan. Values are "<scope>:<id>" so one select or radio can carry both.
+function exportOptions (data, chapter) {
+  return selectedPolicyAreas(chapter).map(area => ({
+    value: 'policy:' + chapter.id + ':' + area.id,
+    text: area.ref + ': ' + area.name
+  })).concat([
+    { value: 'chapter:' + chapter.id, text: chapter.name + ' (full chapter)' },
+    { value: 'plan', text: 'The whole draft plan' }
+  ])
+}
+
+router.get(PD + '/chapters/:pdChapterId/export', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  renderChapterPage(req, res, 'chapter/export', 'export', {
+    chapters: data.chapters,
+    policyAreas: selectedPolicyAreas(chapter),
+    exportOptions: exportOptions(data, chapter),
+    exported: req.query._exported ? chapter.exports[chapter.exports.length - 1] : null
+  })
+})
+
+// The content a view or an export covers, as plain copies, so an export's snapshot stays as it
+// was when later drafting changes the chapter. scope is 'policy', 'chapter' or 'plan'.
+function buildDraftContent (data, scope, chapterId, policyId) {
+  const chapter = data.chapters.find(candidate => candidate.id === chapterId)
+  const chapters = scope !== 'plan' && chapter ? [chapter] : data.chapters
+
+  return JSON.parse(JSON.stringify({
+    scope,
+    chapters: chapters.map(item => ({
+      chapter: { name: item.name, explanatoryText: item.explanatoryText },
+      policyAreas: selectedPolicyAreas(item)
+        .filter(area => scope !== 'policy' || area.id === policyId)
+        .map(area => ({
+          ref: area.ref,
+          name: area.name,
+          strategic: Boolean(area.strategic),
+          draft: item.drafts[area.id] || null
+        }))
+    }))
+  }))
+}
+
+// Export option values are "policy:<chapter>:<policy area>", "chapter:<chapter>" or "plan".
+function parseExportOption (value) {
+  const [scope, chapterId, policyId] = String(value).split(':')
+  return { scope, chapterId, policyId }
+}
+
+// No file is produced — the prototype records the export in the chapter's audit log, with a
+// snapshot of what was exported so that version can be viewed later.
+router.post(PD + '/chapters/:pdChapterId/export', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  const option = exportOptions(data, chapter).find(candidate => candidate.value === req.body._what)
+  const format = req.body._format === 'word' ? 'Word' : 'PDF'
+  if (option) {
+    const { scope, chapterId, policyId } = parseExportOption(option.value)
+    chapter.exports.push({
+      id: 'export-' + Date.now(),
+      what: option.text,
+      format,
+      at: pdTimestamp(),
+      by: 'You',
+      snapshot: buildDraftContent(data, scope, chapterId, policyId)
+    })
+    return res.redirect(pdChapterUrl(chapter, 'export') + '?_exported=1')
+  }
+  res.redirect(pdChapterUrl(chapter, 'export'))
+})
+
+// One exported version from the audit log, opened in a new window.
+router.get(PD + '/chapters/:pdChapterId/export/:exportId', (req, res) => {
+  const chapter = req.pdChapter
+  const entry = chapter.exports.find(candidate => candidate.id === req.params.exportId)
+  if (!entry || !entry.snapshot) return res.redirect(pdChapterUrl(chapter, 'export'))
+  res.render('policy-writing-drafting/preview', Object.assign({ version: entry }, entry.snapshot))
+})
+
+// The read-only draft, opened in a new window from "View in new window". _scope is policy,
+// chapter or plan.
+router.get(PD + '/preview', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const scope = ['policy', 'chapter', 'plan'].includes(req.query._scope) ? req.query._scope : 'plan'
+  res.render('policy-writing-drafting/preview',
+    buildDraftContent(data, scope, req.query._chapter, req.query._policy))
+})

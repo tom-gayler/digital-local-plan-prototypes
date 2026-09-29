@@ -1,0 +1,57 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Draft plan preview" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    {% if version %}
+      {# An earlier export from the audit log, shown from its snapshot. #}
+      <div class="govuk-warning-text">
+        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+        <strong class="govuk-warning-text__text">
+          <span class="govuk-visually-hidden">Warning</span>
+          This is the version exported as {{ version.format }} on {{ version.at }} by {{ version.by }}. It may differ from the current draft.
+        </strong>
+      </div>
+      <span class="govuk-caption-l">Exported version &mdash; {{ version.what }}</span>
+    {% else %}
+      <span class="govuk-caption-l">Draft local plan &mdash; not published</span>
+    {% endif %}
+    <h1 class="govuk-heading-xl">
+      {% if scope == "plan" %}Draft plan{% elif scope == "chapter" %}{{ chapters[0].chapter.name }}{% else %}{{ chapters[0].policyAreas[0].ref }}: {{ chapters[0].policyAreas[0].name }}{% endif %}
+    </h1>
+
+    {% for entry in chapters %}
+      {% if scope != "policy" %}
+        {% if scope == "plan" %}<h2 class="govuk-heading-l">{{ entry.chapter.name }}</h2>{% endif %}
+        {% if entry.chapter.explanatoryText %}
+          <p class="govuk-body dlp-pd-prewrap">{{ entry.chapter.explanatoryText }}</p>
+        {% endif %}
+      {% endif %}
+
+      {% for area in entry.policyAreas %}
+        <section class="dlp-pd-preview-policy">
+          {% if scope != "policy" %}
+            <h3 class="govuk-heading-m">
+              {{ area.ref }}: {{ area.draft.title if (area.draft and area.draft.title) else area.name }}
+              {% if (area.draft and area.draft.strategic) or area.strategic %}<strong class="govuk-tag govuk-tag--purple">Strategic</strong>{% endif %}
+            </h3>
+          {% endif %}
+          {% if area.draft %}
+            {% if area.draft.context %}<p class="govuk-body govuk-!-font-weight-bold dlp-pd-prewrap">{{ area.draft.context }}</p>{% endif %}
+            {% if area.draft.detail %}<p class="govuk-body dlp-pd-prewrap">{{ area.draft.detail }}</p>{% endif %}
+            <p class="govuk-body-s dlp-pd-muted">Last saved {{ area.draft.savedAt }}</p>
+          {% else %}
+            <p class="govuk-body dlp-pd-muted">Not drafted yet.</p>
+          {% endif %}
+        </section>
+      {% else %}
+        <p class="govuk-body dlp-pd-muted">No policy areas selected for this chapter yet.</p>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

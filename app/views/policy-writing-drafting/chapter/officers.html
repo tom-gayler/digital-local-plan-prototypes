@@ -1,0 +1,77 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+
+{% set pageName = "Assign officers" %}
+
+{% block content %}
+
+{{ chapterBreadcrumbs(chapter, "Assign officers") }}
+
+<h1 class="govuk-heading-xl">Assign officers</h1>
+<p class="govuk-body">Assign responsible officers to this chapter. You can add more than one officer.</p>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<form method="post" action="/policy-writing-drafting/chapters/{{ chapter.id }}/officers">
+
+  {% if available | length %}
+    {% set officerItems = [] %}
+    {% for officer in available %}
+      {% set officerItems = (officerItems.push({ value: officer.id, text: officer.name + " (" + officer.role + ")" }), officerItems) %}
+    {% endfor %}
+    <div class="dlp-pd-inline-field">
+      {{ govukSelect({
+        id: "pd-officer",
+        name: "_officer",
+        label: { text: "Select officers", classes: "govuk-label--m", isPageHeading: false },
+        hint: { text: "Search for and select officers to assign to this chapter." },
+        items: officerItems
+      }) }}
+      {{ govukButton({ text: "Add officer", classes: "govuk-button--secondary", name: "_action", value: "add" }) }}
+    </div>
+  {% else %}
+    <h2 class="govuk-heading-m">Select officers</h2>
+    <p class="govuk-body">Every officer is already assigned to this chapter.</p>
+  {% endif %}
+
+  <h2 class="govuk-heading-s govuk-!-margin-top-6">Selected officers</h2>
+  {% if assigned | length %}
+    <table class="govuk-table dlp-pd-table dlp-pd-table--people">
+      <caption class="govuk-table__caption govuk-visually-hidden">Selected officers</caption>
+      <thead class="govuk-table__head govuk-visually-hidden">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">Name</th>
+          <th scope="col" class="govuk-table__header">Role</th>
+          <th scope="col" class="govuk-table__header">Action</th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for officer in assigned %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell govuk-!-font-weight-bold">{{ officer.name }}</td>
+            <td class="govuk-table__cell dlp-pd-muted">{{ officer.role }}</td>
+            <td class="govuk-table__cell">
+              <button type="submit" class="dlp-link-button dlp-pd-remove"
+                      formaction="/policy-writing-drafting/chapters/{{ chapter.id }}/officers/{{ officer.id }}/remove">
+                Remove<span class="govuk-visually-hidden"> {{ officer.name }}</span>
+              </button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="govuk-body dlp-pd-muted">No officers assigned yet.</p>
+  {% endif %}
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m dlp-pd-short-rule" />
+
+  <div class="govuk-button-group">
+    {{ govukButton({ text: "Save and continue", name: "_action", value: "continue" }) }}
+    {{ govukButton({ text: "Back", classes: "govuk-button--secondary", href: "/policy-writing-drafting/chapters" }) }}
+  </div>
+</form>
+
+{% endblock %}

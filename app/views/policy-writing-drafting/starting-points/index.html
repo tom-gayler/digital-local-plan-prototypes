@@ -1,0 +1,64 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% set pageName = "Review starting points" %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({
+  items: [
+    { text: "Home", href: "/policy-writing-drafting" },
+    { text: "Review starting points" }
+  ]
+}) }}
+
+<h1 class="govuk-heading-xl">Review starting points</h1>
+
+<p class="govuk-body dlp-pd-measure">
+  Review the areas that you need to address in this local plan. We've suggested starting points
+  based on your adopted plan. Add, change or remove starting points before creating chapters.
+</p>
+
+<table class="govuk-table dlp-pd-table">
+  <caption class="govuk-table__caption govuk-visually-hidden">Starting points</caption>
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header">Starting point</th>
+      <th scope="col" class="govuk-table__header">Source</th>
+      <th scope="col" class="govuk-table__header">Status</th>
+      <th scope="col" class="govuk-table__header">Actions</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for point in startingPoints %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">{{ point.name }}</td>
+        <td class="govuk-table__cell dlp-pd-muted">{{ point.source }}</td>
+        <td class="govuk-table__cell">
+          {% if point.included %}
+            <strong class="govuk-tag govuk-tag--green">Included</strong>
+          {% else %}
+            <strong class="govuk-tag govuk-tag--light-blue">New</strong>
+          {% endif %}
+        </td>
+        <td class="govuk-table__cell">
+          <form class="dlp-inline-form" method="post" action="/policy-writing-drafting/starting-points/{{ point.id }}/toggle">
+            {% if point.included %}
+              <button type="submit" class="dlp-link-button dlp-pd-remove">Remove<span class="govuk-visually-hidden"> {{ point.name }}</span></button>
+            {% else %}
+              <button type="submit" class="dlp-link-button">Add<span class="govuk-visually-hidden"> {{ point.name }}</span></button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="/policy-writing-drafting/starting-points">
+  <div class="govuk-button-group">
+    {{ govukButton({ text: "Save and continue" }) }}
+    <a class="govuk-link" href="/policy-writing-drafting/starting-points/new">+ Add a starting point</a>
+  </div>
+</form>
+
+{% endblock %}

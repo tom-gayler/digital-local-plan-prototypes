@@ -1228,3 +1228,6 @@ $dlp-confidence-low: govuk-colour("orange");
 // Policy writer v2. Imported last because it uses $dlp-ai-accent and $dlp-confidence-low,
 // which are declared partway down this file rather than at the top.
 @import "policy-writing-v2";
+
+// Policy drafting with starting points — after policy-writing-v2, whose pane styles it reuses.
+@import "policy-drafting";

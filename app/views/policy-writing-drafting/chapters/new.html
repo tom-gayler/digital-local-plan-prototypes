@@ -1,0 +1,35 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% set pageName = "Add a chapter" %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({
+  items: [
+    { text: "Home", href: "/policy-writing-drafting" },
+    { text: "Manage chapters", href: "/policy-writing-drafting/chapters" },
+    { text: "Add a chapter" }
+  ]
+}) }}
+
+<div class="dlp-pd-measure">
+  <h1 class="govuk-heading-xl">Add a chapter</h1>
+
+  <form method="post" action="/policy-writing-drafting/chapters/new">
+    {{ govukInput({
+      label: { text: "Chapter name", classes: "govuk-label--m" },
+      hint: { text: "You can move starting points into it from their own chapter's brief." },
+      id: "pd-chapter-name",
+      name: "_chapterName"
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Add chapter" }) }}
+      <a class="govuk-link" href="/policy-writing-drafting/chapters">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

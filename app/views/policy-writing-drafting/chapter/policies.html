@@ -1,0 +1,80 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+
+{% set pageName = "Create policy areas: " + chapter.name %}
+{% set policiesUrl = "/policy-writing-drafting/chapters/" + chapter.id + "/policies" %}
+
+{% block content %}
+<div class="dlp-pd-page-width">
+
+{{ chapterBreadcrumbs(chapter, "Create policy areas") }}
+
+<h1 class="govuk-heading-xl">Create policy areas: {{ chapter.name }}</h1>
+<p class="govuk-body">Define the policy areas for this chapter.</p>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<form method="post" action="{{ policiesUrl }}">
+  <h2 class="govuk-heading-m">Suggested policy areas</h2>
+  <p class="govuk-body dlp-pd-muted dlp-pd-measure">
+    The following policy areas have been suggested based on your adopted local plan. Select the ones you want to include.
+  </p>
+
+  {# Placeholder from the design — does nothing yet. #}
+  {{ govukButton({ text: "Change policy numbering", classes: "govuk-button--secondary", type: "button" }) }}
+
+  {% if policyAreas | length %}
+    <table class="govuk-table dlp-pd-table dlp-pd-table--boxed">
+      <caption class="govuk-table__caption govuk-visually-hidden">Suggested policy areas</caption>
+      <thead class="govuk-table__head dlp-pd-table__head--shaded">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">Policy number</th>
+          <th scope="col" class="govuk-table__header">Policy area name</th>
+          <th scope="col" class="govuk-table__header">Actions</th>
+          <th scope="col" class="govuk-table__header">Select</th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for area in policyAreas %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell">
+              {{ area.ref }}
+              {% if area.strategic %}<strong class="govuk-tag govuk-tag--purple govuk-!-margin-left-1">Strategic</strong>{% endif %}
+            </td>
+            <td class="govuk-table__cell">{{ area.name }}</td>
+            <td class="govuk-table__cell">
+              <a class="govuk-link" href="{{ policiesUrl }}/{{ area.id }}/edit">Edit<span class="govuk-visually-hidden"> {{ area.ref }} {{ area.name }}</span></a>
+            </td>
+            <td class="govuk-table__cell">
+              <div class="govuk-checkboxes govuk-checkboxes--small" data-module="govuk-checkboxes">
+                <div class="govuk-checkboxes__item">
+                  <input class="govuk-checkboxes__input" id="pd-area-{{ area.id }}" name="_policyAreas" type="checkbox" value="{{ area.id }}" {% if area.selected %}checked{% endif %}>
+                  <label class="govuk-label govuk-checkboxes__label" for="pd-area-{{ area.id }}">
+                    <span class="govuk-visually-hidden">Include {{ area.ref }} {{ area.name }}</span>
+                  </label>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="govuk-body">There are no suggestions for this chapter. Add a policy to get started.</p>
+  {% endif %}
+
+  <p class="govuk-body">
+    <a class="govuk-link govuk-!-font-weight-bold" href="{{ policiesUrl }}/new">+ Add policy</a>
+  </p>
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+  <div class="govuk-button-group">
+    {{ govukButton({ text: "Save and continue" }) }}
+    {{ govukButton({ text: "Back", classes: "govuk-button--secondary", href: "/policy-writing-drafting/chapters/" + chapter.id + "/sources" }) }}
+  </div>
+</form>
+
+</div>
+{% endblock %}

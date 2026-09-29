@@ -478,6 +478,114 @@ module.exports = {
         ]
       }
     ]
+  },
+
+  // "Policy drafting with starting points" (/policy-writing-drafting). Read only through
+  // getPolicyDrafting in app/routes.js, which deep-clones this on first touch. Changing its
+  // shape means bumping POLICY_DRAFTING_SCHEMA_VERSION there.
+  //
+  // startingPoints follow the Figma "Review starting points" screen, with "Health, inclusion and
+  // safety" added as an included starting point so the chapter of that name has one behind it.
+  // Chapters are created from the included starting points; Housing is part-way through, so
+  // the chapter steps have something to show.
+  policyDrafting: {
+    reviewed: false,
+    chaptersConfirmed: false,
+    startingPoints: [
+      { id: 'health-inclusion-safety', name: 'Health, inclusion and safety', source: 'Adopted plan', included: true },
+      { id: 'housing', name: 'Housing', source: 'Adopted plan', included: true },
+      { id: 'infrastructure', name: 'Infrastructure', source: 'Adopted plan', included: true },
+      { id: 'design', name: 'Design', source: 'Adopted plan', included: true },
+      { id: 'offices', name: 'Offices', source: 'Adopted plan', included: true },
+      { id: 'retail', name: 'Retail', source: 'Adopted plan', included: false },
+      { id: 'culture-visitors', name: 'Culture and visitors', source: 'Adopted plan', included: true },
+      { id: 'heritage-tall-buildings', name: 'Heritage and Tall buildings', source: 'Adopted plan', included: true },
+      { id: 'open-spaces', name: 'Open Spaces and Green Infrastructure', source: 'Adopted plan', included: false },
+      { id: 'climate-resilience', name: 'Climate Resilience', source: 'New need', included: false },
+      { id: 'transport', name: 'Transport', source: 'Adopted plan', included: true },
+      { id: 'grey-belt-release', name: 'Grey belt release', source: 'NPPF/SDS', included: false },
+      { id: 'new-thames-crossings', name: 'New Thames Crossings', source: 'NPPF/SDS', included: false }
+    ],
+    chapters: [
+      { id: 'health-inclusion-safety', name: 'Health, inclusion and safety', startingPointIds: ['health-inclusion-safety'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      {
+        id: 'housing',
+        name: 'Housing',
+        startingPointIds: ['housing'],
+        brief: 'Plan for the homes the City needs over the plan period, including affordable housing, while protecting its role as a centre of business.',
+        officers: ['sarah-jenkins', 'james-chen'],
+        explanatoryText: '',
+        sources: ['shma', 'nppf-housing'],
+        policyAreas: null,
+        drafts: {},
+        // Earlier exports by colleagues, so the audit log has history to show. Each keeps a
+        // snapshot of what was exported, in the shape buildDraftContent returns.
+        exports: [
+          {
+            id: 'export-seed-1',
+            what: 'Housing (full chapter)',
+            format: 'PDF',
+            at: '12/09/2026, 16:05',
+            by: 'Sarah Jenkins',
+            snapshot: {
+              scope: 'chapter',
+              chapters: [{
+                chapter: {
+                  name: 'Housing',
+                  explanatoryText: 'The City has a small but growing residential population, concentrated in a handful of established residential areas. The Strategic Housing Market Assessment identifies a need for new homes that are overwhelmingly affordable, alongside the London Plan target of 146 homes a year.'
+                },
+                policyAreas: [
+                  {
+                    ref: 'HS1',
+                    name: 'Location of New Housing',
+                    strategic: false,
+                    draft: {
+                      title: 'Location of new housing',
+                      context: 'This policy directs new housing to places where residents can enjoy a good standard of amenity without constraining the City\'s business function.',
+                      detail: 'New housing will be supported in or near identified residential areas, where it would not prejudice the primary business function of the City or cause unacceptable harm to residential amenity.',
+                      strategic: false,
+                      savedAt: '12/09/2026, 15:48'
+                    }
+                  },
+                  { ref: 'HS2', name: 'Loss of housing', strategic: false, draft: null }
+                ]
+              }]
+            }
+          },
+          {
+            id: 'export-seed-2',
+            what: 'HS1: Location of New Housing',
+            format: 'Word',
+            at: '23/09/2026, 12:52',
+            by: 'James Chen',
+            snapshot: {
+              scope: 'policy',
+              chapters: [{
+                chapter: { name: 'Housing', explanatoryText: '' },
+                policyAreas: [{
+                  ref: 'HS1',
+                  name: 'Location of New Housing',
+                  strategic: false,
+                  draft: {
+                    title: 'Location of new housing',
+                    context: 'This policy directs new housing to places where residents can enjoy a good standard of amenity without constraining the City\'s business function.',
+                    detail: 'New housing will be supported in or near identified residential areas, where it would not prejudice the primary business function of the City or cause unacceptable harm to residential amenity. At least 35% of homes on sites of ten or more units should be affordable, in line with the London Plan threshold approach.',
+                    strategic: false,
+                    savedAt: '23/09/2026, 12:40'
+                  }
+                }]
+              }]
+            }
+          }
+        ]
+      },
+      { id: 'infrastructure', name: 'Infrastructure', startingPointIds: ['infrastructure'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'design', name: 'Design', startingPointIds: ['design'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'offices', name: 'Offices', startingPointIds: ['offices'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'culture-visitors', name: 'Culture and visitors', startingPointIds: ['culture-visitors'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'heritage-tall-buildings', name: 'Heritage and Tall buildings', startingPointIds: ['heritage-tall-buildings'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'transport', name: 'Transport', startingPointIds: ['transport'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] }
+    ]
   }
 
 }

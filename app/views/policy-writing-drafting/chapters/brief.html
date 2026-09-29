@@ -1,0 +1,56 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "policy-writing-drafting/partials/requirements-panel.html" import requirementsPanel %}
+
+{% set pageName = "Edit starting point" %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({
+  items: [
+    { text: "Home", href: "/policy-writing-drafting" },
+    { text: "Manage chapters", href: "/policy-writing-drafting/chapters" },
+    { text: "Edit starting point" }
+  ]
+}) }}
+
+<a class="govuk-back-link govuk-!-margin-top-0" href="/policy-writing-drafting/chapters">Back to starting points</a>
+
+<h1 class="govuk-heading-xl">{{ chapter.name }}</h1>
+
+<div class="dlp-pd-with-panel">
+  <form method="post" action="/policy-writing-drafting/chapters/{{ chapter.id }}/brief" class="dlp-pd-with-panel__main">
+    {{ govukCharacterCount({
+      name: "_brief",
+      id: "pd-brief",
+      maxlength: 500,
+      rows: 6,
+      value: chapter.brief,
+      label: { text: "Brief", classes: "govuk-label--m" },
+      hint: { text: "Add a brief description of the issues this starting point should address in your local plan." }
+    }) }}
+
+    {% set chapterItems = [] %}
+    {% for item in chapters %}
+      {% set chapterItems = (chapterItems.push({ value: item.id, text: item.name, selected: item.id == chapter.id }), chapterItems) %}
+    {% endfor %}
+    {{ govukSelect({
+      id: "pd-assign-to",
+      name: "_assignTo",
+      label: { text: "Assign to chapter", classes: "govuk-label--m" },
+      hint: { text: "If this issue should be addressed within a different chapter, you can change that here. Select a chapter to assign this issue to. You can change this later." },
+      items: chapterItems
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Save changes" }) }}
+      <a class="govuk-link" href="/policy-writing-drafting/chapters">Cancel</a>
+    </div>
+  </form>
+
+  {{ requirementsPanel(requirements, "brief", nppfUrl) }}
+</div>
+
+{% endblock %}
