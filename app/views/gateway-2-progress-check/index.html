@@ -54,6 +54,7 @@
         <tr class="govuk-table__row">
           <th class="govuk-table__header" scope="col">Evidence</th>
           <th class="govuk-table__header" scope="col">Status</th>
+          <th class="govuk-table__header" scope="col">Last updated</th>
           <th class="govuk-table__header" scope="col"><span class="govuk-visually-hidden">Action</span></th>
         </tr>
       </thead>
@@ -64,6 +65,7 @@
           <td class="govuk-table__cell">
             <strong class="govuk-tag{% if evidenceStatusColours[item.status] %} govuk-tag--{{ evidenceStatusColours[item.status] }}{% endif %}">{{ item.status }}</strong>
           </td>
+          <td class="govuk-table__cell">{{ item.lastUpdated }}</td>
           <td class="govuk-table__cell">
             <a class="govuk-link" href="{{ item.href }}">View<span class="govuk-visually-hidden"> {{ item.name }}</span></a>
           </td>

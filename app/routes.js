@@ -1571,6 +1571,7 @@ router.get('/gateway-2-progress-check', (req, res) => {
   const evidence = Object.keys(DOCUMENTS).map(source => ({
     name: source,
     status: getEvidenceStatus(source),
+    lastUpdated: DOCUMENTS[source].date,
     href: '/gateway-2-progress-check/evidence/' + encodeURIComponent(source)
   }))
 
@@ -1607,13 +1608,18 @@ function buildChapterResources (area) {
       officerNote: getEvidenceOfficerNote(excerpt)
     }, excerpt))
 
-  const responses = policies.flatMap(policy =>
-    (policy.consultationResponses || []).map(response =>
-      Object.assign({ policyRef: policy.ref, policyTitle: policy.title }, response)))
+  // Grouped into themes the same way as Examination - inspector view (buildRelatedResources,
+  // reused per policy below) rather than a second, independent grouping — a theme should look
+  // the same wherever an inspector encounters it. policyRef/policyTitle are added here because
+  // this list spans every policy in the chapter, unlike buildRelatedResources's single-policy
+  // callers, which don't need to say which policy a theme belongs to.
+  const representations = policies.flatMap(policy =>
+    buildRelatedResources(policy, policy.ref.toLowerCase() + '-1').representations
+      .map(theme => Object.assign({ policyRef: policy.ref, policyTitle: policy.title }, theme)))
 
   const paragraphs = PLAN_PARAGRAPHS.filter(paragraph => paragraph.policyArea === area)
 
-  return { sources, evidence, responses, paragraphs }
+  return { sources, evidence, representations, paragraphs }
 }
 
 router.get('/gateway-2-progress-check/chapters/:area', (req, res) => {

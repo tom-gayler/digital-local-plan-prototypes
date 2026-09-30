@@ -1,6 +1,7 @@
-{% extends "layouts/main.html" %}
+{% extends "layouts/main-with-sidebar.html" %}
 
 {% from "partials/external-header/macro.njk" import appExternalHeader %}
+{% from "partials/side-navigation/macro.njk" import appSideNavigation %}
 {% from "partials/timeline/macro.njk" import appTimeline %}
 {% from "govuk/components/accordion/macro.njk" import govukAccordion %}
 
@@ -9,6 +10,25 @@
 {% block header %}
   {{ super() }}
   {{ appExternalHeader({ title: "Gateway 2 progress check" }) }}
+{% endblock %}
+
+{# Same jump-link-plus-status shape the side navigation component already renders elsewhere
+   (see CLAUDE.md's "Side navigation component") — reused here instead of a hand-rolled table
+   now that stageStatuses already uses the standardised status wording the macro's icons match. #}
+{% set chapterSections = [
+  {
+    items: [
+      { text: "Brief", href: "#brief", status: stageStatuses.brief },
+      { text: "Sources", href: "#sources", status: stageStatuses.sources },
+      { text: "Evidence", href: "#evidence", status: stageStatuses.evidence },
+      { text: "Representations", href: "#representations", status: stageStatuses.representations },
+      { text: "Policy Text", href: "#policy-text", status: stageStatuses.policyText }
+    ]
+  }
+] %}
+
+{% block sideNavigation %}
+  {{ appSideNavigation({ title: area, sections: chapterSections, ariaLabel: "Chapter section status" }) }}
 {% endblock %}
 
 {% block content %}
@@ -24,38 +44,6 @@
       <span class="govuk-!-font-weight-bold">Assigned to:</span>
       {{ officers | join(", ") if officers.length else "Not assigned" }}
     </p>
-
-    <table class="govuk-table">
-      <caption class="govuk-table__caption govuk-table__caption--m govuk-visually-hidden">Chapter section status</caption>
-      <thead class="govuk-table__head">
-        <tr class="govuk-table__row">
-          <th class="govuk-table__header" scope="col">Section</th>
-          <th class="govuk-table__header" scope="col">Status</th>
-        </tr>
-      </thead>
-      <tbody class="govuk-table__body">
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"><a class="govuk-link" href="#brief">Brief</a></td>
-          <td class="govuk-table__cell"><strong class="govuk-tag{% if statusColours[stageStatuses.brief] %} govuk-tag--{{ statusColours[stageStatuses.brief] }}{% endif %}">{{ stageStatuses.brief }}</strong></td>
-        </tr>
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"><a class="govuk-link" href="#sources">Sources</a></td>
-          <td class="govuk-table__cell"><strong class="govuk-tag{% if statusColours[stageStatuses.sources] %} govuk-tag--{{ statusColours[stageStatuses.sources] }}{% endif %}">{{ stageStatuses.sources }}</strong></td>
-        </tr>
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"><a class="govuk-link" href="#evidence">Evidence</a></td>
-          <td class="govuk-table__cell"><strong class="govuk-tag{% if statusColours[stageStatuses.evidence] %} govuk-tag--{{ statusColours[stageStatuses.evidence] }}{% endif %}">{{ stageStatuses.evidence }}</strong></td>
-        </tr>
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"><a class="govuk-link" href="#responses">Responses</a></td>
-          <td class="govuk-table__cell"><strong class="govuk-tag{% if statusColours[stageStatuses.responses] %} govuk-tag--{{ statusColours[stageStatuses.responses] }}{% endif %}">{{ stageStatuses.responses }}</strong></td>
-        </tr>
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"><a class="govuk-link" href="#policy-text">Policy Text</a></td>
-          <td class="govuk-table__cell"><strong class="govuk-tag{% if statusColours[stageStatuses.policyText] %} govuk-tag--{{ statusColours[stageStatuses.policyText] }}{% endif %}">{{ stageStatuses.policyText }}</strong></td>
-        </tr>
-      </tbody>
-    </table>
 
     {% set auditLogHtml %}
       {% if auditLog.length %}
@@ -134,18 +122,29 @@
 
     <p class="govuk-body"><a class="govuk-link" href="#top">Back to top</a></p>
 
-    <h2 class="govuk-heading-l govuk-!-margin-top-6" id="responses">Responses</h2>
-    {% if resources.responses.length %}
-      <ul class="govuk-list">
-        {% for response in resources.responses %}
-        <li class="govuk-!-margin-bottom-4">
-          <p class="govuk-body">{{ response.comment }}</p>
-          <p class="govuk-body-s dlp-document-hint">{{ response.respondent }}, {{ response.ref }} &middot; against {{ response.policyRef }} {{ response.policyTitle }}</p>
-        </li>
-        {% endfor %}
-      </ul>
+    <h2 class="govuk-heading-l govuk-!-margin-top-6" id="representations">Representations</h2>
+    {% if resources.representations.length %}
+      <table class="govuk-table">
+        <caption class="govuk-table__caption govuk-table__caption--m govuk-visually-hidden">Representation themes for this chapter</caption>
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th class="govuk-table__header" scope="col">Theme</th>
+            <th class="govuk-table__header" scope="col">Policy</th>
+            <th class="govuk-table__header" scope="col">Representations</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for theme in resources.representations %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell"><a class="govuk-link" href="{{ theme.href }}">{{ theme.title }}</a></td>
+            <td class="govuk-table__cell">{{ theme.policyRef }} {{ theme.policyTitle }}</td>
+            <td class="govuk-table__cell">{{ theme.meta }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     {% else %}
-      <p class="govuk-body-s dlp-document-hint">No responses recorded for this chapter yet.</p>
+      <p class="govuk-body-s dlp-document-hint">No representations recorded for this chapter yet.</p>
     {% endif %}
 
     <p class="govuk-body"><a class="govuk-link" href="#top">Back to top</a></p>
