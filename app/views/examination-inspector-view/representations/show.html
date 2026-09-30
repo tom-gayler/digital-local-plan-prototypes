@@ -1,0 +1,42 @@
+{% extends "layouts/main-with-sidebar.html" %}
+{% from "partials/side-navigation/macro.njk" import appSideNavigation %}
+{% from "partials/external-header/macro.njk" import appExternalHeader %}
+
+{% set pageName = theme.title %}
+
+{% block header %}
+  {{ super() }}
+  {{ appExternalHeader({ title: "Examination - inspector view" }) }}
+{% endblock %}
+
+{% block sideNavigation %}
+  {{ appSideNavigation({ title: organisationName + " Local Plan", sections: sidebarSections }) }}
+{% endblock %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <a class="govuk-back-link" href="/examination-inspector-view/paragraphs/{{ paragraph.id }}">Back to {{ paragraph.policyRef }} {{ paragraph.policyTitle }}</a>
+
+    <span class="govuk-caption-l">{{ paragraph.policyRef }} {{ paragraph.policyTitle }}</span>
+    <h1 class="govuk-heading-xl">{{ theme.title }}</h1>
+
+    <p class="govuk-body">{{ theme.meta }} on this theme.</p>
+
+    <ul class="govuk-list">
+      {% for response in theme.responses %}
+      <li class="govuk-!-margin-bottom-4">
+        <p class="govuk-body">{{ response.comment }}</p>
+        <p class="govuk-body-s dlp-document-hint">{{ response.respondent }}, {{ response.ref }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <p class="govuk-body-s dlp-document-hint">
+      This prototype shows an illustrative sample of the representations on this theme, not all {{ theme.meta }}.
+    </p>
+  </div>
+</div>
+
+{% endblock %}

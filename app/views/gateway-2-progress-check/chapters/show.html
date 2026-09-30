@@ -158,6 +158,9 @@
           {% set currentPolicyRef = paragraph.policyRef %}
           <h3 class="govuk-heading-m govuk-!-margin-top-6">
             <a class="govuk-link" href="/examination-inspector-view/paragraphs/{{ paragraph.policyRef | lower }}-1">{{ paragraph.policyRef }} {{ paragraph.policyTitle }}</a>
+            {% if paragraph.isStrategic %}
+            <strong class="govuk-tag govuk-!-margin-left-2">Strategic Policy</strong>
+            {% endif %}
             <strong class="govuk-tag govuk-!-margin-left-2{% if statusColours[policyStatuses[paragraph.policyRef]] %} govuk-tag--{{ statusColours[policyStatuses[paragraph.policyRef]] }}{% endif %}">{{ policyStatuses[paragraph.policyRef] }}</strong>
           </h3>
         {% endif %}

@@ -139,6 +139,9 @@ block content %}
           {% else %}
           {{ item.ref }} {{ item.title }}
           {% endif %}
+          {% if item.isStrategic %}
+          <strong class="govuk-tag govuk-!-margin-left-2">Strategic Policy</strong>
+          {% endif %}
         </h3>
         <p class="govuk-body-s{% if item.hasSummary %} govuk-!-margin-bottom-0{% endif %}">{{ item.summary }}</p>
         {% if not item.hasSummary %}
