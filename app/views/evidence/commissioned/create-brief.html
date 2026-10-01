@@ -1,0 +1,157 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+
+{% set pageName = "Create brief" %}
+{% set brief = commission.brief %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Create brief" }
+] }) }}
+
+{% if errorList.length %}
+  {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+{% endif %}
+
+<h1 class="govuk-heading-l govuk-!-margin-bottom-1">Create brief</h1>
+<p class="govuk-body-s dlp-ce-muted">Logged in as {{ viewer }}</p>
+
+<form method="post" action="/evidence/commissioned/create-brief" class="dlp-ce-form" novalidate>
+
+  {{ govukInput({
+    id: "title",
+    name: "_title",
+    value: brief.title,
+    label: { text: "Enter title", classes: "govuk-label--m", isPageHeading: false },
+    hint: { text: "Give the brief a short descriptive title" },
+    errorMessage: { text: errors.title } if errors.title
+  }) }}
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+  {{ govukTextarea({
+    id: "brief",
+    name: "_brief",
+    value: brief.text,
+    rows: 6,
+    label: { text: "Enter brief", classes: "govuk-label--m" },
+    hint: { text: "Describe what the expert needs to investigate or report on" },
+    errorMessage: { text: errors.brief } if errors.brief
+  }) }}
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+  <h2 class="govuk-heading-m govuk-!-margin-bottom-2">Add supporting files or links</h2>
+  <p class="govuk-hint">Upload or enter the URL of any supporting information or guidance for the consultant.</p>
+
+  {# The prototype keeps only the file's name — there is no storage behind it. #}
+  {{ govukFileUpload({
+    id: "file",
+    name: "_file",
+    label: { text: "Upload a file", classes: "govuk-label--s" },
+    hint: { text: ("Currently attached: " + brief.file) if brief.file else "Upload a file from your device." }
+  }) }}
+
+  {{ govukInput({
+    id: "link",
+    name: "_link",
+    type: "url",
+    value: brief.link,
+    spellcheck: false,
+    label: { text: "Enter a link", classes: "govuk-label--s" },
+    hint: { text: "Enter a direct URL where the brief can be accessed, for example https://example.com/brief.pdf" }
+  }) }}
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+  {% set themeItems = [] %}
+  {% for theme in themes %}
+    {% set themeItems = (themeItems.push({ value: theme, text: theme, checked: theme in brief.themes }), themeItems) %}
+  {% endfor %}
+  {{ govukCheckboxes({
+    idPrefix: "themes",
+    name: "_themes",
+    classes: "govuk-checkboxes--small dlp-ce-two-columns",
+    fieldset: { legend: { text: "Themes", classes: "govuk-fieldset__legend--m" } },
+    hint: { text: "Select the themes that should be included in the brief." },
+    items: themeItems
+  }) }}
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+  {% set consultantItems = [{ value: "", text: "Select a consultant" }] %}
+  {% for consultant in consultants %}
+    {% set consultantItems = (consultantItems.push({
+      value: consultant.id,
+      text: consultant.name + ", " + consultant.organisation,
+      selected: consultant.id == brief.consultantId
+    }), consultantItems) %}
+  {% endfor %}
+
+  {% set previousHtml %}
+    {{ govukSelect({
+      id: "consultantId",
+      name: "_consultantId",
+      label: { text: "Choose a consultant" },
+      hint: { text: "Select from consultants you have worked with before" },
+      items: consultantItems,
+      errorMessage: { text: errors.consultantId } if errors.consultantId
+    }) }}
+  {% endset %}
+
+  {% set newHtml %}
+    {{ govukInput({
+      id: "consultantName",
+      name: "_consultantName",
+      value: brief.newConsultant.name,
+      autocomplete: "name",
+      spellcheck: false,
+      label: { text: "Full name" },
+      errorMessage: { text: errors.consultantName } if errors.consultantName
+    }) }}
+    {{ govukInput({
+      id: "consultantOrganisation",
+      name: "_consultantOrganisation",
+      value: brief.newConsultant.organisation,
+      autocomplete: "organization",
+      label: { text: "Organisation" }
+    }) }}
+    {{ govukInput({
+      id: "consultantEmail",
+      name: "_consultantEmail",
+      type: "email",
+      value: brief.newConsultant.email,
+      autocomplete: "email",
+      spellcheck: false,
+      label: { text: "Email address" },
+      errorMessage: { text: errors.consultantEmail } if errors.consultantEmail
+    }) }}
+  {% endset %}
+
+  {{ govukRadios({
+    idPrefix: "consultantMode",
+    name: "_consultantMode",
+    fieldset: { legend: { text: "Choose a consultant", classes: "govuk-fieldset__legend--m" } },
+    hint: { text: "Select an existing consultant or add a new one." },
+    items: [
+      { value: "previous", text: "Select from previous consultants", checked: brief.consultantMode != "new", conditional: { html: previousHtml } },
+      { value: "new", text: "Add a new consultant", checked: brief.consultantMode == "new", conditional: { html: newHtml } }
+    ]
+  }) }}
+
+  <h2 class="govuk-heading-s govuk-!-margin-bottom-1">Brief will be sent from</h2>
+  <p class="govuk-body">{{ officer.email }}</p>
+
+  {{ govukButton({ text: "Send to consultant" }) }}
+
+</form>
+
+{% endblock %}

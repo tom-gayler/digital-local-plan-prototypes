@@ -1,0 +1,36 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "evidence/commissioned/partials/handoff.html" import ceHandoff %}
+
+{% set pageName = "Brief sent" %}
+
+{% block content %}
+
+<div class="dlp-ce-measure">
+
+  {{ govukPanel({
+    titleText: "Brief sent",
+    html: "We've emailed <strong>" + (commission.brief.title | escape) + "</strong> to " + (commission.brief.consultant.name | escape)
+  }) }}
+
+  <h2 class="govuk-heading-m">What happens next</h2>
+  <p class="govuk-body">
+    {{ commission.brief.consultant.name }}{% if commission.brief.consultant.organisation %} at {{ commission.brief.consultant.organisation }}{% endif %}
+    will get an email with the brief and a link to submit their report. You'll be told when they
+    submit a draft, and can then review and comment on it.
+  </p>
+
+  {{ ceHandoff({
+    text: "In the real service the consultant gets an email at this point. To carry on as them, switch to the consultant's view.",
+    linkText: "Switch to " + commission.brief.consultant.name + " (consultant)",
+    href: "/evidence/commissioned/consultant/submit-report"
+  }) }}
+
+  <p class="govuk-body">
+    <a class="govuk-link" href="/evidence/commissioned/brief">View the brief</a>
+  </p>
+
+</div>
+
+{% endblock %}

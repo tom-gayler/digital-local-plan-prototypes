@@ -25,6 +25,10 @@ router.use((req, res, next) => {
     res.locals.activeSection = 'evidence'
   } else if (req.path.startsWith('/user-stories')) {
     res.locals.activeSection = 'user-stories'
+  } else if (req.path.startsWith('/pins-view')) {
+    // Only the PINS hub page. The prototypes it links to are seen by inspectors, so they keep
+    // their own external header with no internal nav (see partials/external-header).
+    res.locals.activeSection = 'pins-view'
   }
   next()
 })
@@ -617,6 +621,490 @@ router.post('/evidence/results', (req, res) => {
   }
 
   res.redirect('/evidence/results?exported=1')
+})
+
+// --- Managing commissioned evidence ---
+//
+// An officer briefs an external consultant, the consultant submits a report, and the officer
+// reviews, comments, adds notes and accepts it into the evidence library:
+//   /evidence/commissioned                       - landing page, with a reset per entry point
+//   /evidence/commissioned/create-brief          - write and send the brief
+//   /evidence/commissioned/brief(-sent)          - the sent brief, and its confirmation
+//   /evidence/commissioned/consultant/...        - the consultant's screens (an external user)
+//   /evidence/commissioned/review                - the report, with comments beside it
+//   /evidence/commissioned/notes                 - notes, sent to the consultant or internal
+//   /evidence/commissioned/accept                - tag and accept the report
+//   /evidence/commissioned/source                - the accepted source in the library
+//
+// The consultant's screens wouldn't be reachable from the officer's journey in a real service.
+// Testers get to them through "Prototype only" handoff panels (commissioned/partials/handoff.html)
+// and from the landing page, and they use their own header without the internal nav.
+//
+// Everything is one object, req.session.data.commissionedEvidence, read only through
+// getCommission. Free-text fields are named `_…` so the kit doesn't copy them into session data.
+
+const CE = '/evidence/commissioned'
+const COMMISSIONED_EVIDENCE_SCHEMA_VERSION = 1
+
+const {
+  THEMES: CE_THEMES,
+  OFFICER: CE_OFFICER,
+  PREVIOUS_CONSULTANTS,
+  getPreviousConsultant,
+  startingCommission,
+  emptyReport
+} = require('./data/commissioned-evidence.js')
+
+function getCommission (req) {
+  if (req.session.data.commissionedEvidenceSchemaVersion !== COMMISSIONED_EVIDENCE_SCHEMA_VERSION) {
+    req.session.data.commissionedEvidence = JSON.parse(JSON.stringify(sessionDataDefaults.commissionedEvidence))
+    req.session.data.commissionedEvidenceOwned = true
+    req.session.data.commissionedEvidenceSchemaVersion = COMMISSIONED_EVIDENCE_SCHEMA_VERSION
+  }
+  if (!req.session.data.commissionedEvidenceOwned) {
+    req.session.data.commissionedEvidence = JSON.parse(JSON.stringify(req.session.data.commissionedEvidence))
+    req.session.data.commissionedEvidenceOwned = true
+  }
+  return req.session.data.commissionedEvidence
+}
+
+// The seed with the report taken out: the brief has gone to the consultant and nothing has come
+// back yet. This is where "See the consultant's view" starts.
+function briefSentCommission () {
+  const commission = JSON.parse(JSON.stringify(sessionDataDefaults.commissionedEvidence))
+  commission.stage = 'brief-sent'
+  commission.report = emptyReport()
+  commission.summary = null
+  commission.comments = []
+  commission.notes = []
+  commission.history = commission.history.slice(0, 1)
+  return commission
+}
+
+const CE_STARTS = {
+  start: { build: startingCommission, redirect: CE + '/create-brief' },
+  consultant: { build: briefSentCommission, redirect: CE + '/consultant/submit-report' },
+  review: { build: () => JSON.parse(JSON.stringify(sessionDataDefaults.commissionedEvidence)), redirect: CE + '/review' }
+}
+
+function ceTimeZoneFormat (options) {
+  return new Date().toLocaleString('en-GB', Object.assign({ timeZone: 'Europe/London' }, options))
+}
+
+function ceNow () {
+  return ceTimeZoneFormat({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function ceToday () {
+  return ceTimeZoneFormat({ day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function ceLog (commission, actor, action, link) {
+  commission.history.push({ at: ceNow(), actor, action, link: link || null })
+}
+
+function ceText (value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function ceThemes (value) {
+  return [].concat(value || []).filter(theme => CE_THEMES.includes(theme))
+}
+
+function ceNextId (prefix, items) {
+  return prefix + Date.now().toString(36) + items.length
+}
+
+// Errors survive the redirect in session data, and are cleared as soon as they're shown.
+function ceSetErrors (req, errors) {
+  req.session.data.commissionedEvidenceErrors = errors
+}
+
+function ceTakeErrors (req) {
+  const errors = req.session.data.commissionedEvidenceErrors || {}
+  delete req.session.data.commissionedEvidenceErrors
+  return errors
+}
+
+function ceErrorList (errors) {
+  return Object.keys(errors).map(id => ({ text: errors[id], href: '#' + id }))
+}
+
+function ceCommentLabel (comment) {
+  return comment.section || 'General comment'
+}
+
+// Sidebar statuses follow from where the commission has got to. Only three states here, by
+// design: Not started, In progress (the page you're on) and Completed. A step that can't be
+// done yet reads as Not started rather than showing a lock; its page redirects back anyway.
+function buildCommissionSidebar (commission, active) {
+  const briefSent = commission.stage !== 'not-started'
+  const accepted = commission.status === 'accepted'
+  const steps = [
+    { key: 'brief', text: 'Create brief', href: briefSent ? CE + '/brief' : CE + '/create-brief', done: briefSent },
+    { key: 'review', text: 'Review and comment', href: CE + '/review', done: accepted },
+    { key: 'accept', text: 'Accept and save', href: CE + '/accept', done: accepted },
+    { key: 'source', text: 'Manage source', href: CE + '/source', done: false }
+  ]
+  return [{
+    items: steps.map(step => {
+      const isActive = step.key === active
+      let status = 'Not started'
+      if (step.done) status = 'Completed'
+      else if (isActive) status = 'In progress'
+      return { text: step.text, href: step.href, active: isActive, status }
+    })
+  }]
+}
+
+// Numbers each comment that is anchored to a paragraph, in reading order, so the [n] beside a
+// paragraph and the [n] on its comment match.
+function numberCommission (commission) {
+  const paragraphs = commission.report.paragraphs.map((paragraph, index) => ({
+    id: paragraph.id,
+    text: paragraph.text,
+    position: index + 1,
+    comments: []
+  }))
+  const numbers = {}
+  let next = 1
+  paragraphs.forEach(paragraph => {
+    commission.comments.filter(comment => comment.anchor === paragraph.id).forEach(comment => {
+      numbers[comment.id] = next++
+      paragraph.comments.push({ id: comment.id, number: numbers[comment.id], resolved: comment.resolved })
+    })
+    paragraph.highlighted = paragraph.comments.some(comment => !comment.resolved)
+  })
+  const comments = commission.comments.map(comment => Object.assign({}, comment, { number: numbers[comment.id] || null }))
+  return { paragraphs, comments }
+}
+
+function renderCommissionPage (req, res, view, active, locals) {
+  const commission = getCommission(req)
+  const errors = ceTakeErrors(req)
+  res.render('evidence/commissioned/' + view, Object.assign({
+    commission,
+    themes: CE_THEMES,
+    officer: CE_OFFICER,
+    viewer: CE_OFFICER.name,
+    errors,
+    errorList: ceErrorList(errors),
+    sidebarSections: buildCommissionSidebar(commission, active)
+  }, locals))
+}
+
+router.get(CE, (req, res) => {
+  res.render('evidence/commissioned/index')
+})
+
+router.post(CE + '/reset', (req, res) => {
+  const start = CE_STARTS[req.body._stage] || CE_STARTS.start
+  getCommission(req)
+  req.session.data.commissionedEvidence = start.build()
+  req.session.data.commissionedEvidenceOwned = true
+  delete req.session.data.commissionedEvidenceErrors
+  res.redirect(start.redirect)
+})
+
+// --- Create brief ---
+
+router.get(CE + '/create-brief', (req, res) => {
+  if (getCommission(req).stage !== 'not-started') return res.redirect(CE + '/brief')
+  renderCommissionPage(req, res, 'create-brief', 'brief', { consultants: PREVIOUS_CONSULTANTS })
+})
+
+router.post(CE + '/create-brief', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage !== 'not-started') return res.redirect(CE + '/brief')
+  const brief = commission.brief
+  const body = req.body
+
+  // Keep what was typed, so a validation error doesn't lose it.
+  brief.title = ceText(body._title)
+  brief.text = ceText(body._brief)
+  brief.link = ceText(body._link)
+  if (ceText(body._file)) brief.file = ceText(body._file)
+  brief.themes = ceThemes(body._themes)
+  brief.consultantMode = body._consultantMode === 'new' ? 'new' : 'previous'
+  brief.consultantId = ceText(body._consultantId)
+  brief.newConsultant = {
+    name: ceText(body._consultantName),
+    organisation: ceText(body._consultantOrganisation),
+    email: ceText(body._consultantEmail)
+  }
+
+  const errors = {}
+  if (!brief.title) errors.title = 'Enter a title for the brief'
+  if (!brief.text) errors.brief = 'Describe what the consultant needs to investigate or report on'
+  let consultant = null
+  if (brief.consultantMode === 'previous') {
+    consultant = getPreviousConsultant(brief.consultantId)
+    if (!consultant) errors.consultantId = 'Select a consultant'
+  } else {
+    if (!brief.newConsultant.name) errors.consultantName = 'Enter the consultant\'s full name'
+    if (!brief.newConsultant.email) errors.consultantEmail = 'Enter the consultant\'s email address'
+    consultant = brief.newConsultant
+  }
+  if (Object.keys(errors).length) {
+    ceSetErrors(req, errors)
+    return res.redirect(CE + '/create-brief')
+  }
+
+  brief.consultant = {
+    name: consultant.name,
+    organisation: consultant.organisation,
+    email: consultant.email
+  }
+  brief.commencedOn = ceToday()
+  commission.stage = 'brief-sent'
+  commission.status = 'draft'
+  commission.report = emptyReport()
+  commission.summary = null
+  commission.comments = []
+  commission.notes = []
+  commission.history = []
+  commission.tags = []
+  commission.acceptedOn = null
+  ceLog(commission, CE_OFFICER.name, 'Created brief and assigned it to ' + brief.consultant.name,
+    { text: 'View brief', href: CE + '/brief' })
+  res.redirect(CE + '/brief-sent')
+})
+
+router.get(CE + '/brief-sent', (req, res) => {
+  if (getCommission(req).stage === 'not-started') return res.redirect(CE + '/create-brief')
+  renderCommissionPage(req, res, 'brief-sent', 'brief')
+})
+
+router.get(CE + '/brief', (req, res) => {
+  if (getCommission(req).stage === 'not-started') return res.redirect(CE + '/create-brief')
+  renderCommissionPage(req, res, 'brief', 'brief')
+})
+
+// --- The consultant's screens (external user) ---
+
+function renderConsultantPage (req, res, view, locals) {
+  const commission = getCommission(req)
+  const errors = ceTakeErrors(req)
+  const report = commission.report
+  res.render('evidence/commissioned/consultant/' + view, Object.assign({
+    commission,
+    viewer: commission.brief.consultant ? commission.brief.consultant.name : 'the consultant',
+    errors,
+    errorList: ceErrorList(errors),
+    // The seed holds the report as paragraphs only, so rebuild the text box's contents from them.
+    reportContent: report.content || report.paragraphs.map(paragraph => paragraph.text).join('\n\n'),
+    notesFromCouncil: commission.notes.filter(note => note.sentToConsultant).slice().reverse()
+  }, locals))
+}
+
+router.get(CE + '/consultant/submit-report', (req, res) => {
+  renderConsultantPage(req, res, 'submit-report')
+})
+
+router.post(CE + '/consultant/submit-report', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage === 'not-started' || commission.status === 'accepted') {
+    return res.redirect(CE + '/consultant/submit-report')
+  }
+  const report = commission.report
+  report.title = ceText(req.body._reportTitle)
+  report.content = typeof req.body._reportContent === 'string' ? req.body._reportContent.trim() : ''
+  const file = ceText(req.body._file)
+  if (file && !report.files.includes(file)) report.files.push(file)
+
+  if (req.body._action === 'add-link') {
+    const link = ceText(req.body._linkUrl)
+    if (!link) {
+      ceSetErrors(req, { linkUrl: 'Enter a URL to add' })
+    } else if (!report.links.includes(link)) {
+      report.links.push(link)
+    }
+    return res.redirect(CE + '/consultant/submit-report#add-links')
+  }
+
+  const errors = {}
+  if (!report.title) errors.reportTitle = 'Enter a title for your report'
+  if (!report.content) errors.reportContent = 'Enter your report content'
+  if (Object.keys(errors).length) {
+    ceSetErrors(req, errors)
+    return res.redirect(CE + '/consultant/submit-report')
+  }
+
+  // A blank line starts a new paragraph. Comments keep their paragraph by position, and any
+  // whose paragraph has gone become general comments.
+  report.paragraphs = report.content.split(/\n\s*\n/)
+    .map(text => text.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .map((text, index) => ({ id: 'p' + (index + 1), text }))
+  const ids = report.paragraphs.map(paragraph => paragraph.id)
+  commission.comments.forEach(comment => {
+    if (comment.anchor && !ids.includes(comment.anchor)) comment.anchor = null
+  })
+  const revised = Boolean(report.submittedAt)
+  report.submittedAt = ceNow()
+  commission.stage = 'submitted'
+  ceLog(commission, commission.brief.consultant.name, revised ? 'Submitted revised draft report' : 'Submitted draft report',
+    { text: 'View version', href: CE + '/review' })
+  res.redirect(CE + '/consultant/submitted')
+})
+
+router.get(CE + '/consultant/submitted', (req, res) => {
+  if (getCommission(req).stage !== 'submitted') return res.redirect(CE + '/consultant/submit-report')
+  renderConsultantPage(req, res, 'submitted')
+})
+
+// --- Review and comment ---
+
+router.get(CE + '/review', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage === 'not-started') return res.redirect(CE + '/create-brief')
+  const numbered = numberCommission(commission)
+  renderCommissionPage(req, res, 'review', 'review', {
+    paragraphs: numbered.paragraphs,
+    comments: numbered.comments,
+    openCount: commission.comments.filter(comment => !comment.resolved).length,
+    history: commission.history.slice().reverse()
+  })
+})
+
+router.post(CE + '/review/comments', (req, res) => {
+  const commission = getCommission(req)
+  const text = ceText(req.body._comment)
+  if (!text) {
+    ceSetErrors(req, { comment: 'Enter a comment' })
+    return res.redirect(CE + '/review#add-comment')
+  }
+  const index = commission.report.paragraphs.findIndex(paragraph => paragraph.id === req.body._anchor)
+  const comment = {
+    id: ceNextId('c', commission.comments),
+    author: CE_OFFICER.name,
+    at: ceNow(),
+    anchor: index >= 0 ? commission.report.paragraphs[index].id : null,
+    section: index >= 0 ? 'Paragraph ' + (index + 1) : 'General comment',
+    text,
+    replies: [],
+    resolved: false
+  }
+  commission.comments.push(comment)
+  ceLog(commission, CE_OFFICER.name,
+    index >= 0 ? 'Added comment on Paragraph ' + (index + 1) : 'Added general comment',
+    { text: 'View comment', href: CE + '/review#comment-' + comment.id })
+  res.redirect(CE + '/review#comment-' + comment.id)
+})
+
+router.post(CE + '/review/comments/:commentId/reply', (req, res) => {
+  const commission = getCommission(req)
+  const comment = commission.comments.find(candidate => candidate.id === req.params.commentId)
+  if (!comment) return res.redirect(CE + '/review')
+  const text = ceText(req.body._reply)
+  if (!text) {
+    ceSetErrors(req, { ['reply-' + comment.id]: 'Enter a reply' })
+    return res.redirect(CE + '/review#comment-' + comment.id)
+  }
+  comment.replies.push({ author: CE_OFFICER.name, at: ceNow(), text })
+  ceLog(commission, CE_OFFICER.name, 'Replied to comment on ' + ceCommentLabel(comment),
+    { text: 'View comment', href: CE + '/review#comment-' + comment.id })
+  res.redirect(CE + '/review#comment-' + comment.id)
+})
+
+// Resolving is offered on both Review and Manage source, so it goes back to wherever it came from.
+router.post(CE + '/comments/:commentId/resolve', (req, res) => {
+  const commission = getCommission(req)
+  const comment = commission.comments.find(candidate => candidate.id === req.params.commentId)
+  const back = req.body._returnTo === 'source' ? CE + '/source' : CE + '/review'
+  if (comment && !comment.resolved) {
+    comment.resolved = true
+    ceLog(commission, CE_OFFICER.name, 'Resolved comment on ' + ceCommentLabel(comment),
+      { text: 'View comment', href: CE + '/review#comment-' + comment.id })
+  }
+  res.redirect(back + (comment ? '#comment-' + comment.id : ''))
+})
+
+router.post(CE + '/review/resolve-all', (req, res) => {
+  const commission = getCommission(req)
+  const open = commission.comments.filter(comment => !comment.resolved)
+  if (open.length) {
+    open.forEach(comment => { comment.resolved = true })
+    ceLog(commission, CE_OFFICER.name, 'Resolved all comments (' + open.length + ')')
+  }
+  res.redirect(CE + '/review')
+})
+
+// --- Notes ---
+
+router.get(CE + '/notes', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage === 'not-started') return res.redirect(CE + '/create-brief')
+  renderCommissionPage(req, res, 'notes', 'review', { notes: commission.notes.slice().reverse() })
+})
+
+router.post(CE + '/notes', (req, res) => {
+  const commission = getCommission(req)
+  const text = ceText(req.body._note)
+  if (!text) {
+    ceSetErrors(req, { note: 'Enter a note' })
+    return res.redirect(CE + '/notes')
+  }
+  const sentToConsultant = req.body._send === 'consultant'
+  commission.notes.push({
+    id: ceNextId('n', commission.notes),
+    text,
+    date: ceTimeZoneFormat({ day: 'numeric', month: 'short', year: 'numeric' }),
+    time: ceTimeZoneFormat({ hour: '2-digit', minute: '2-digit' }),
+    by: CE_OFFICER.name,
+    sentToConsultant
+  })
+  ceLog(commission, CE_OFFICER.name,
+    sentToConsultant ? 'Sent a note to ' + commission.brief.consultant.name : 'Added an internal note',
+    { text: 'View notes', href: CE + '/notes' })
+  res.redirect(CE + '/notes')
+})
+
+// --- Accept and save ---
+
+router.get(CE + '/accept', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage !== 'submitted') return res.redirect(CE + '/review')
+  // Until someone has chosen tags, start from the themes the brief asked about.
+  const selectedTags = commission.status === 'accepted' || commission.tags.length
+    ? commission.tags
+    : commission.brief.themes
+  renderCommissionPage(req, res, 'accept', 'accept', {
+    selectedTags,
+    openCount: commission.comments.filter(comment => !comment.resolved).length
+  })
+})
+
+router.post(CE + '/accept', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage !== 'submitted') return res.redirect(CE + '/review')
+  commission.tags = ceThemes(req.body._tags)
+  if (commission.status === 'accepted') {
+    ceLog(commission, CE_OFFICER.name, 'Updated tags')
+  } else {
+    commission.status = 'accepted'
+    commission.acceptedOn = ceToday()
+    ceLog(commission, CE_OFFICER.name, 'Accepted document and added it to the evidence library',
+      { text: 'View version', href: CE + '/review' })
+  }
+  res.redirect(CE + '/source')
+})
+
+// --- Manage source ---
+
+router.get(CE + '/source', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.status !== 'accepted') return res.redirect(CE + '/accept')
+  const numbered = numberCommission(commission)
+  const report = commission.report
+  const slug = (report.title || commission.brief.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  renderCommissionPage(req, res, 'source', 'source', {
+    comments: numbered.comments,
+    openCount: commission.comments.filter(comment => !comment.resolved).length,
+    history: commission.history.slice().reverse(),
+    file: report.file || { name: (slug || 'report') + '.pdf', meta: 'Generated from the submitted report' },
+    summary: commission.summary || (report.paragraphs[0] && report.paragraphs[0].text) || ''
+  })
 })
 
 // --- Policy writing prototype ---

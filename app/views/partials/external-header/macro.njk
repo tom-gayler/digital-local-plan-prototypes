@@ -12,13 +12,26 @@
       {{ appExternalHeader({ title: "..." }) }}
     {% endblock %}
 
+  A page inside an internal prototype that is seen by an external user (e.g. the consultant's
+  screens in evidence/commissioned) overrides the block WITHOUT super(), so the internal nav
+  that `activeSection` would otherwise add is left out — see
+  evidence/commissioned/partials/external-layout.html.
+
   params.title: string (required) — the prototype's name, shown with no nav or links alongside it.
+  params.organisationName: string (optional) — shown before the title, as on the service header.
+  params.user: string (optional) — who is signed in, shown as "You are logged in as …".
 #}
 
 {% macro appExternalHeader(params) %}
 <div class="app-external-header">
-  <div class="govuk-width-container">
+  <div class="govuk-width-container app-external-header__inner">
+    {% if params.organisationName %}
+      <p class="app-external-header__org">{{ params.organisationName }}</p>
+    {% endif %}
     <p class="app-external-header__title">{{ params.title }}</p>
+    {% if params.user %}
+      <p class="app-external-header__user">You are logged in as {{ params.user }}</p>
+    {% endif %}
   </div>
 </div>
 {% endmacro %}

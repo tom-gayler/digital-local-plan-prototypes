@@ -128,10 +128,14 @@ prototype" menu.
    (`serviceName`, already a global in every template), and a nav row linking to each prototype.
    The active nav item is `#1d8feb` (a precise brand blue, not a `govuk-colour()` tint);
    everything else is white — see `app/assets/sass/_service-header.scss`.
-2. `activeSection` (`"project-management"` | `"policy-writing"` | `"evidence"`) is set
+2. `activeSection` (`"project-management"` | `"policy-writing"` | `"evidence"` |
+   `"pins-view"` | `"user-stories"`) is set
    automatically by a `router.use` middleware at the top of `app/routes.js`, based on the
    request path — no per-page wiring needed, since that middleware runs for every request
-   (including plain `app/views/*/index.html` pages with no custom route).
+   (including plain `app/views/*/index.html` pages with no custom route). `"pins-view"` covers
+   only the `/pins-view` hub: the inspector prototypes it lists (`/examination-inspector-view`,
+   `/gateway-2-progress-check`) are seen by someone outside the LPA, so they keep the external
+   header with no internal nav.
 3. Adding a fourth prototype that should appear in the nav: add a nav item to the macro and a
    branch to the `activeSection` middleware in `app/routes.js`.
 
@@ -151,6 +155,13 @@ Styling lives in `app/assets/sass/_service-header.scss` (`.app-service-header*`)
    for the pattern: heading, intro paragraph, "User need" statement, back link to `/`).
 2. Add an entry to `app/views/index.html` linking to it, with a short description and a
    "User need:" line, matching the existing entries' format.
+
+Prototypes that belong to an area (Policy writing, Evidence, PINS view) are listed on that
+area's hub page rather than on `/`. Each hub splits them under two headings: **Current
+prototypes** ("These are the most recent prototypes we've developed. We'll be testing these over
+the next few weeks.") and **Previous versions** ("These are prototypes we've tested through
+Design Feedback sessions and other informal tests."). Entries under them are `h3`s. A new
+prototype normally goes under Current; move it to Previous versions when the team says so.
 
 ## Side navigation component
 
@@ -484,6 +495,45 @@ the repo. Ask the user for them if you need to compare against the design.
   builder the live preview uses. So "View this version" (`/chapters/:id/export/:exportId`)
   shows what was exported, not the current draft. Housing is seeded with two earlier exports.
   **Changing the entry shape means bumping `POLICY_DRAFTING_SCHEMA_VERSION`.**
+
+## Managing commissioned evidence
+
+`/evidence/commissioned` (`app/views/evidence/commissioned/`) is built from the Figma frames in
+the git-ignored `Figma screenshots/Managing evidence/` folder. An officer (Danny Dyer) briefs an
+external consultant (Elena Waters), the consultant submits a report, and the officer reviews,
+comments, adds notes and accepts it into the library.
+
+- **Slug.** Nested under `/evidence`, so the `activeSection` middleware already puts it under
+  "Evidence". It is listed on `app/views/evidence/index.html`, not the root landing page.
+- **State** is one object, `commissionedEvidence`, read only through `getCommission` and stamped
+  with `COMMISSIONED_EVIDENCE_SCHEMA_VERSION`, so **bump that when the seed's shape changes**.
+  `stage` (`not-started` → `brief-sent` → `submitted`) and `status` (`draft` | `accepted`) drive
+  the sidebar statuses and which pages redirect where. The sidebar deliberately uses only three
+  states — Not started, In progress, Completed — never "Cannot start" (the lock icon), by design
+  request. The landing page's three entry points
+  POST to `/reset` with `_stage` (`start`, `consultant`, `review`), which swap in a fitting state.
+  Static content (themes, previous consultants, `startingCommission()`) is in
+  `app/data/commissioned-evidence.js`. Every action is logged to `history`, shown as Document
+  history.
+- **Screens seen by an external user.** The consultant's pages
+  (`consultant/submit-report`, `consultant/submitted`) extend
+  `evidence/commissioned/partials/external-layout.html`, which overrides the `header` block
+  **without `super()`**: the URL is under `/evidence`, so `super()` would bring the internal
+  service-header nav back. It shows `appExternalHeader` with its optional `organisationName` and
+  `user` params instead. Reuse that shape for any other external-user screen inside an internal
+  prototype.
+- **Testers cross between the two people through "Prototype only" panels**
+  (`partials/handoff.html`, `ceHandoff`): a dashed purple box saying it would not appear in the
+  real service, with a "Switch to …" link. They sit where something would pass between two people
+  in the real service (the brief being emailed, the report arriving), never as general
+  navigation.
+- **Comments anchor to paragraphs.** The consultant's text is split into paragraphs on blank
+  lines; a comment's `anchor` is a paragraph id. `numberCommission` numbers anchored comments in
+  reading order, so the `[n]` beside a paragraph and on its comment match. A paragraph is
+  highlighted only while one of its comments is open.
+- **Inert placeholders from the design:** both rich-text toolbars, "Edit metadata" and
+  "Download PDF". File uploads keep only the file name (the form isn't multipart and nothing is
+  stored).
 
 ## Keeping this file current
 

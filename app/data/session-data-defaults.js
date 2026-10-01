@@ -586,6 +586,92 @@ module.exports = {
       { id: 'heritage-tall-buildings', name: 'Heritage and Tall buildings', startingPointIds: ['heritage-tall-buildings'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
       { id: 'transport', name: 'Transport', startingPointIds: ['transport'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] }
     ]
+  },
+
+  // Managing commissioned evidence (/evidence/commissioned). One commission, part-way through:
+  // the consultant has submitted a draft and the officer is reviewing it. Read only through
+  // getCommission in app/routes.js, and stamped with COMMISSIONED_EVIDENCE_SCHEMA_VERSION, so
+  // bump that when this shape changes. "Start from the beginning" swaps in startingCommission()
+  // from app/data/commissioned-evidence.js instead. History is oldest first; pages reverse it.
+  commissionedEvidence: {
+    stage: 'submitted',
+    status: 'draft',
+    brief: {
+      title: 'Housing delivery assessment',
+      text: 'Assess whether the City can deliver the housing target proposed in the draft plan over the plan period. Review delivery since 2020, test the proposed annual target against the capacity of local infrastructure, and recommend a target and phasing that can be supported. Identify any sites where further environmental assessment is needed before they can be relied on.',
+      link: 'https://example.com/brief.pdf',
+      file: '',
+      themes: ['Health, inclusion and safety', 'Housing', 'Infrastructure', 'Climate Resilience', 'Strategic policy'],
+      consultant: { name: 'Elena Waters', organisation: 'Waters Consultancy', email: 'elena@waters.co.uk' },
+      assignedOfficer: 'Sarah Mitchell',
+      sentBy: 'danny.dyer@council.gov.uk',
+      commencedOn: '15 September 2025'
+    },
+    report: {
+      title: 'Housing delivery assessment',
+      content: '',
+      paragraphs: [
+        { id: 'p1', text: 'The current housing delivery targets for the upcoming fiscal year are ambitious. Our preliminary analysis suggests that the local infrastructure may struggle to support the rapid expansion proposed in the draft plan.' },
+        { id: 'p2', text: 'The target of 500 new units should be revised to 350 units to align with current infrastructure capacity.' },
+        { id: 'p3', text: 'Further consultation with local residents and environmental groups is recommended to ensure the plan is sustainable in the long term. Transport links to the proposed development sites require significant investment before construction begins.' },
+        { id: 'p4', text: 'The environmental impact assessment has not yet been completed for sites north of the river.' },
+        { id: 'p5', text: 'We recommend phasing the development over a 5-year period rather than the proposed 3-year timeline to manage demand on local services.' }
+      ],
+      links: ['https://example.com/infrastructure-capacity-study'],
+      files: ['housing-delivery-tables.xlsx'],
+      file: { name: 'housing-delivery-assessment.pdf', meta: 'PDF · 42 pages · 3.8 MB' },
+      submittedAt: '22 Sep 2025, 16:30'
+    },
+    summary: 'This assessment reviews housing delivery across the City of London from 2020 to 2025. It recommends a phased target of 350 new homes a year, supported by planned transport and utilities investment, and identifies further environmental assessment for sites north of the river.',
+    comments: [
+      {
+        id: 'c1',
+        author: 'Danny Dyer',
+        at: '23 Sep 2025, 10:15',
+        anchor: 'p2',
+        section: 'Section 2 — Housing target',
+        text: 'This target reduction needs supporting evidence from the infrastructure report. Can you reference section 3.2?',
+        replies: [
+          { author: 'Elena Waters', at: '23 Sep 2025, 14:20', text: 'Updated with the infrastructure report reference and revised the paragraph.' }
+        ],
+        resolved: false
+      },
+      {
+        id: 'c2',
+        author: 'Sarah Mitchell',
+        at: '24 Sep 2025, 09:30',
+        anchor: 'p4',
+        section: 'Section 3 — Environmental assessment',
+        text: 'The EIA timeline should be included. I have the draft dates from the environmental team.',
+        replies: [],
+        resolved: false
+      },
+      {
+        id: 'c3',
+        author: 'David Chen',
+        at: '24 Sep 2025, 11:00',
+        anchor: null,
+        section: 'General comment',
+        text: 'Overall good progress. Please address the two highlighted sections before we move to final review.',
+        replies: [],
+        resolved: false
+      }
+    ],
+    notes: [
+      { id: 'n1', text: 'I\'ve added the initial evidence source and included the supporting data supplied by the policy team.', date: '18 Sep 2025', time: '11:47', by: 'Danny Dyer', sentToConsultant: true },
+      { id: 'n2', text: 'This evidence aligns with the current policy direction, but we should verify the figures before sharing.', date: '23 Sep 2025', time: '09:15', by: 'James Brown', sentToConsultant: false },
+      { id: 'n3', text: 'Please clarify the source date and confirm whether the data has been updated since the last review.', date: '24 Sep 2025', time: '14:32', by: 'Sarah Mitchell', sentToConsultant: true }
+    ],
+    history: [
+      { at: '15 Sep 2025, 09:00', actor: 'Danny Dyer', action: 'Created brief and assigned it to Elena Waters', link: { text: 'View brief', href: '/evidence/commissioned/brief' } },
+      { at: '22 Sep 2025, 16:30', actor: 'Elena Waters', action: 'Submitted draft report', link: { text: 'View version', href: '/evidence/commissioned/review' } },
+      { at: '23 Sep 2025, 10:15', actor: 'Danny Dyer', action: 'Added comment on Section 2 — housing target', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c1' } },
+      { at: '23 Sep 2025, 14:20', actor: 'Elena Waters', action: 'Replied to comment on Section 2', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c1' } },
+      { at: '24 Sep 2025, 09:30', actor: 'Sarah Mitchell', action: 'Added comment on Section 3 — EIA timeline', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c2' } },
+      { at: '24 Sep 2025, 11:00', actor: 'David Chen', action: 'Added comment — overall progress note', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c3' } }
+    ],
+    tags: [],
+    acceptedOn: null
   }
 
 }

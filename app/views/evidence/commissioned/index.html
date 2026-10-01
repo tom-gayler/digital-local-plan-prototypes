@@ -1,0 +1,67 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Managing commissioned evidence" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <a class="govuk-back-link" href="/evidence">Back to Evidence</a>
+
+    <h1 class="govuk-heading-xl">Managing commissioned evidence</h1>
+
+    <p class="govuk-body">
+      Commission a piece of evidence from an external consultant and see it through to the
+      evidence library. Write a brief and send it, receive the consultant's report, review it with
+      comments and notes, then tag it and accept it as a source for policy writing.
+    </p>
+
+    <p class="govuk-body">
+      This journey involves two people. Most screens are seen by a policy officer, Danny Dyer.
+      One, submitting the report, is seen by the consultant, Elena Waters, who works outside the
+      council. Panels marked <strong>Prototype only</strong> let you switch between the two where
+      the work passes from one to the other.
+    </p>
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+    {# Each entry resets the prototype's data to a fitting starting point, so they POST. #}
+    <form method="post" action="/evidence/commissioned/reset" class="dlp-ce-start" novalidate>
+      <h2 class="govuk-heading-m">Start from the beginning</h2>
+      <p class="govuk-body">
+        As the policy officer, write a brief and send it to a consultant. Then switch to the
+        consultant to submit the report, and back again to review it.
+      </p>
+      <button type="submit" name="_stage" value="start" class="govuk-button" data-module="govuk-button">
+        Start as the policy officer
+      </button>
+    </form>
+
+    <form method="post" action="/evidence/commissioned/reset" class="dlp-ce-start" novalidate>
+      <h2 class="govuk-heading-m">Review a submitted report</h2>
+      <p class="govuk-body">
+        Skip ahead to a housing delivery assessment the consultant has already submitted, with
+        comments and notes in place.
+      </p>
+      <button type="submit" name="_stage" value="review" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+        Go to review and comment
+      </button>
+    </form>
+
+    <form method="post" action="/evidence/commissioned/reset" class="dlp-ce-start" novalidate>
+      <h2 class="govuk-heading-m">See the consultant's view <span class="govuk-caption-m dlp-ce-start__caption">External user</span></h2>
+      <p class="govuk-body">
+        The screen the consultant uses to submit their report. They are outside the council, so
+        they would reach it from the email that sends them the brief, not from the officer's
+        journey. It has no internal navigation.
+      </p>
+      <button type="submit" name="_stage" value="consultant" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+        Submit a report as the consultant
+      </button>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

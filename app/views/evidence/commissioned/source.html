@@ -1,0 +1,97 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "evidence/commissioned/partials/comment.html" import ceComment %}
+{% from "evidence/commissioned/partials/document-history.html" import ceDocumentHistory %}
+
+{% set title = commission.report.title or commission.brief.title %}
+{% set pageName = "Manage source: " + title %}
+{% set consultant = commission.brief.consultant %}
+
+{% block content %}
+
+{# Held to the GOV.UK page width — see .dlp-ce-page. #}
+<div class="dlp-ce-page">
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Evidence library", href: "/evidence/library" },
+  { text: "Manage source" }
+] }) }}
+
+<h1 class="govuk-heading-l govuk-!-margin-bottom-2">Manage source: {{ title }}</h1>
+<div class="dlp-ce-status-line">
+  {{ govukTag({ text: "Accepted", classes: "govuk-tag--green" }) }}
+  <p class="govuk-body-s dlp-ce-muted govuk-!-margin-bottom-0">Logged in as {{ viewer }}</p>
+</div>
+
+<div class="dlp-ce-source">
+  <div class="dlp-ce-source__details">
+    <div class="dlp-ce-section-head">
+      <h2 class="govuk-heading-m govuk-!-margin-bottom-0">Source details</h2>
+      {# Inert placeholder from the design. #}
+      <a class="govuk-link dlp-ce-placeholder" aria-hidden="true" tabindex="-1">Edit metadata</a>
+    </div>
+
+    {% set tagsHtml %}
+      {% if commission.tags.length %}
+        <ul class="dlp-ce-tag-list">
+          {% for tag in commission.tags %}<li>{{ govukTag({ text: tag, classes: "govuk-tag--grey" }) }}</li>{% endfor %}
+        </ul>
+      {% else %}None{% endif %}
+    {% endset %}
+
+    {{ govukSummaryList({ rows: [
+      { key: { text: "Title" }, value: { text: title } },
+      { key: { text: "Author" }, value: { text: consultant.name + (", " + consultant.organisation if consultant.organisation else "") } },
+      { key: { text: "Owned by" }, value: { text: officer.name + ", " + officer.role } },
+      { key: { text: "Date commenced" }, value: { text: commission.brief.commencedOn } },
+      { key: { text: "Date accepted" }, value: { text: commission.acceptedOn } },
+      { key: { text: "Tags" }, value: { html: tagsHtml }, actions: { items: [{ href: "/evidence/commissioned/accept", text: "Change", visuallyHiddenText: "tags" }] } }
+    ] }) }}
+
+    <h2 class="govuk-heading-m">Summary</h2>
+    <p class="govuk-body">{{ summary }}</p>
+  </div>
+
+  <aside class="dlp-ce-file" aria-label="Document">
+    <p class="dlp-ce-file__name">
+      <svg class="dlp-ce-file__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
+        <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M6 2.9h8l4.1 4.1v14.1H6z M14 2.9v4.1h4.1 M8.8 12h6.4 M8.8 15h6.4 M8.8 18h4"/>
+      </svg>
+      <span class="dlp-ce-break">{{ file.name }}</span>
+    </p>
+    <p class="govuk-body-s dlp-ce-muted">{{ file.meta }}</p>
+    {{ govukButton({ text: "Open document", href: "/evidence/commissioned/review", classes: "govuk-button--secondary govuk-!-margin-bottom-3" }) }}
+    {# Inert placeholder from the design: the prototype stores no files. #}
+    <p class="govuk-body-s govuk-!-margin-bottom-0"><a class="govuk-link dlp-ce-placeholder" aria-hidden="true" tabindex="-1">Download PDF</a></p>
+  </aside>
+</div>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<h2 class="govuk-heading-m govuk-!-margin-bottom-1" id="document-history">Document history</h2>
+<p class="govuk-body-s dlp-ce-muted">A record of changes, comments and decisions for this evidence source.</p>
+{{ ceDocumentHistory(history) }}
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<div class="dlp-ce-section-head">
+  <div>
+    <h2 class="govuk-heading-m govuk-!-margin-bottom-1" id="comments">All comments on this source</h2>
+    <p class="govuk-body-s dlp-ce-muted">
+      {{ comments.length }} comment{{ "" if comments.length == 1 else "s" }} · {{ openCount }} open · {{ comments.length - openCount }} resolved
+    </p>
+  </div>
+  <a class="govuk-link" href="/evidence/commissioned/review#add-comment">Add a comment</a>
+</div>
+
+{% for comment in comments %}
+  {{ ceComment(comment, { context: "source" }) }}
+{% else %}
+  <p class="govuk-body">No comments.</p>
+{% endfor %}
+
+</div>
+
+{% endblock %}
