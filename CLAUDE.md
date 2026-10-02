@@ -232,9 +232,14 @@ data already filled in) and `blank` (empty, so a user experiences filling it in 
 reusing 100% of the same routes and templates rather than duplicating either. The pattern, if
 another prototype needs the same thing:
 
-1. Add a `:variant` segment to every route in the journey (`/policy-writing/:variant/...`).
-   Guard it once with `router.param('variant', ...)`, redirecting anything not in an allowed
-   list back to the prototype's landing page, rather than validating it in every handler.
+1. Add a variant segment to every route in the journey (`/policy-writing/:variant/...`). Guard
+   it once with `router.param(<name>, ...)`, redirecting anything not in an allowed list back to
+   the prototype's landing page, rather than validating it in every handler. **A second prototype
+   doing this must use a different parameter name from any other** — Express's `router.param`
+   registers per parameter name across the whole router, not per route, so a second prototype
+   reusing `:variant` would also run policy-writing's `PW_VARIANTS` check against its own values
+   and bounce every request back to `/policy-writing`. See `:socVariant` in the Statement of
+   compliance prototype for the pattern.
 2. Session-data accessors take `variant` as a parameter and key both the stored data *and* the
    deep-clone-on-first-touch "owned" sentinel by variant (an object, not a single flag) — see
    `getStartingPointItems`/`getPolicyTopics` in `app/routes.js`. Seed data

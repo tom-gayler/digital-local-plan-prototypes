@@ -1,0 +1,48 @@
+{% extends "layouts/main.html" %}
+
+{% from "partials/timeline/macro.njk" import appTimeline %}
+
+{% set pageName = requirement.ref + " " + requirement.title %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <a class="govuk-back-link" href="/statement-of-compliance/{{ variant }}">Back to {{ "draft" if variant == "draft" else "completed" }} statement of compliance</a>
+
+    <span class="govuk-caption-xl">{{ requirement.ref }}</span>
+    <h1 class="govuk-heading-xl">{{ requirement.title }}</h1>
+
+    <p class="govuk-body">
+      <strong class="govuk-tag{% if statusColours[status] %} govuk-tag--{{ statusColours[status] }}{% endif %}">{{ status }}</strong>
+    </p>
+
+    <p class="govuk-body">{{ requirement.description }}</p>
+
+    {% if variant == "draft" %}
+    <h2 class="govuk-heading-m govuk-!-margin-top-6">Planned activities</h2>
+    {% if plannedActivity %}
+    <div class="govuk-inset-text">
+      <p class="govuk-body">{{ plannedActivity }}</p>
+    </div>
+    {% else %}
+    <p class="govuk-body-s dlp-document-hint">No further activities planned for this requirement.</p>
+    {% endif %}
+    {% else %}
+    <div class="govuk-inset-text">
+      <p class="govuk-body">No further action required.</p>
+    </div>
+    {% endif %}
+
+    <h2 class="govuk-heading-m govuk-!-margin-top-6">Evidence</h2>
+    {% if history.length %}
+      {{ appTimeline({ entries: history | reverse, caption: "Audit log of actions taken to justify compliance with this requirement." }) }}
+    {% else %}
+      <p class="govuk-body-s dlp-document-hint">No actions recorded against this requirement yet.</p>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

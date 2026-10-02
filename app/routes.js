@@ -25,6 +25,8 @@ router.use((req, res, next) => {
     res.locals.activeSection = 'evidence'
   } else if (req.path.startsWith('/user-stories')) {
     res.locals.activeSection = 'user-stories'
+  } else if (req.path.startsWith('/statement-of-compliance')) {
+    res.locals.activeSection = 'statement-of-compliance'
   } else if (req.path.startsWith('/pins-view')) {
     // Only the PINS hub page. The prototypes it links to are seen by inspectors, so they keep
     // their own external header with no internal nav (see partials/external-header).
@@ -64,6 +66,14 @@ const {
   getSourceOfficerNote,
   getEvidenceOfficerNote
 } = require('./data/gateway-2-progress.js')
+const {
+  getRequirements,
+  getRequirement,
+  getStatus: getRequirementStatus,
+  getHistory: getRequirementHistory,
+  getPlannedActivity,
+  isKnownDocument
+} = require('./data/statement-of-compliance.js')
 
 // --- Evidence prototype (E2US3 / E2US4) ---
 //
@@ -2147,6 +2157,81 @@ router.get('/gateway-2-progress-check/evidence/:source', (req, res) => {
   })
 })
 
+// --- Statement of compliance prototype ---
+//
+// For the local planning authority (not an external viewer, unlike Examination - inspector
+// view and Gateway 2 progress check, so this carries the standard site nav): a checklist of the
+// legislative requirements a statement of compliance must evidence, each with a status and a
+// link through to that requirement's evidence (an audit log of what's been done, via the
+// shared appTimeline partial — see app/data/statement-of-compliance.js for the status/history
+// model this prototype shares with Gateway 2's audit logs).
+//
+// Two variants, same pattern as policy-writing (see CLAUDE.md's "Parallel journey variants"):
+// "draft" (not everything met yet, each requirement's page shows Planned activities) and
+// "completed" (everything Fully met, no further action required). Deliberately a DIFFERENT
+// param name from policy-writing's :variant — router.param registers per parameter name across
+// the whole router, not per route, so reusing :variant here would also run PW_VARIANTS'
+// ['prefilled', 'blank'] check against 'draft'/'completed' and bounce every request to
+// /policy-writing.
+const SOC_VARIANTS = ['draft', 'completed']
+
+router.param('socVariant', (req, res, next, socVariant) => {
+  if (!SOC_VARIANTS.includes(socVariant)) return res.redirect('/statement-of-compliance')
+  next()
+})
+
+const STATEMENT_STATUS_COLOURS = {
+  'Not yet met': 'grey',
+  'Partially met': 'yellow',
+  'Fully met': 'green'
+}
+
+router.get('/statement-of-compliance', (req, res) => {
+  res.render('statement-of-compliance/index.html')
+})
+
+router.get('/statement-of-compliance/:socVariant', (req, res) => {
+  const variant = req.params.socVariant
+
+  const requirements = getRequirements().map(requirement => ({
+    ref: requirement.ref,
+    title: requirement.title,
+    status: getRequirementStatus(requirement.ref, variant),
+    href: '/statement-of-compliance/' + variant + '/requirements/' + encodeURIComponent(requirement.ref)
+  }))
+
+  res.render('statement-of-compliance/checklist.html', {
+    variant,
+    requirements,
+    statusColours: STATEMENT_STATUS_COLOURS
+  })
+})
+
+router.get('/statement-of-compliance/:socVariant/requirements/:ref', (req, res) => {
+  const variant = req.params.socVariant
+  const requirement = getRequirement(req.params.ref)
+  if (!requirement) return res.redirect('/statement-of-compliance/' + variant)
+
+  res.render('statement-of-compliance/requirements/show.html', {
+    variant,
+    requirement,
+    status: getRequirementStatus(requirement.ref, variant),
+    statusColours: STATEMENT_STATUS_COLOURS,
+    history: getRequirementHistory(requirement.ref, variant),
+    plannedActivity: getPlannedActivity(requirement.ref, variant)
+  })
+})
+
+// A placeholder viewer for the materials linked from the audit log (the notice, a consultation
+// summary, the self-assessment, and so on) — there's no real document behind any of them, so
+// this renders the title only rather than pretending to show real content.
+router.get('/statement-of-compliance/documents/:title', (req, res) => {
+  if (!isKnownDocument(req.params.title)) return res.redirect('/statement-of-compliance')
+
+  res.render('statement-of-compliance/documents/show.html', {
+    title: req.params.title
+  })
+})
 // --- Policy drafting with starting points ---
 //
 // Built from the Figma designs for this journey (see CLAUDE.md). Two phases:

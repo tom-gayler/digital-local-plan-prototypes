@@ -1,0 +1,45 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Statement of compliance (" + (variant | capitalize) + ")" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <a class="govuk-back-link" href="/statement-of-compliance">Back to Statement of compliance</a>
+
+    <span class="govuk-caption-xl">{{ "Draft" if variant == "draft" else "Completed" }} statement of compliance</span>
+    <h1 class="govuk-heading-xl">{{ organisationName }} Local Plan</h1>
+
+    {% if variant == "draft" %}
+    <p class="govuk-body">
+      This statement is for use at Gateway 2 to check progress. Not every requirement is met
+      yet — see each requirement's evidence for what is planned and when.
+    </p>
+    {% else %}
+    <p class="govuk-body">
+      Every requirement below is fully met, with no further action required.
+    </p>
+    {% endif %}
+
+    <ul class="govuk-list">
+      {% for requirement in requirements %}
+      <li class="govuk-!-margin-bottom-6">
+        <h2 class="govuk-heading-m govuk-!-margin-bottom-2">
+          <span class="govuk-!-font-weight-bold">{{ requirement.ref }}</span> {{ requirement.title }}
+        </h2>
+        <p class="govuk-body">
+          <strong class="govuk-tag{% if statusColours[requirement.status] %} govuk-tag--{{ statusColours[requirement.status] }}{% endif %}">{{ requirement.status }}</strong>
+        </p>
+        <p class="govuk-body">
+          <a class="govuk-link" href="{{ requirement.href }}">See evidence<span class="govuk-visually-hidden"> for {{ requirement.ref }}</span></a>
+        </p>
+      </li>
+      {% endfor %}
+    </ul>
+
+  </div>
+</div>
+
+{% endblock %}
