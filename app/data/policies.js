@@ -48,8 +48,8 @@ const POLICIES = [
     consultationSummary: 'Broad support for a stronger inclusive design requirement. Developers questioned how the standard would be evidenced at application stage; access groups asked for wayfinding to be explicitly covered.',
     consultationResponseCount: 46,
     consultationResponses: [
-      { respondent: 'Inclusive Access Panel', ref: 'Paragraphs 8, 14', comment: 'Wayfinding should be named in the policy itself, not just the supporting text — signage and legibility are as much a barrier as steps.' },
-      { respondent: 'Guide Dogs', ref: 'Paragraph 5', comment: 'Supports going beyond minimum standards, but asks that tactile paving and level thresholds be treated as baseline rather than optional enhancements.' }
+      { respondent: 'Inclusive Access Panel', ref: 'Paragraphs 8, 14', comment: 'Wayfinding should be named in the policy itself, not just the supporting text — signage and legibility are as much a barrier as steps.', theme: 'Wayfinding in the policy', themeCount: 21 },
+      { respondent: 'Guide Dogs', ref: 'Paragraph 5', comment: 'Supports going beyond minimum standards, but asks that tactile paving and level thresholds be treated as baseline rather than optional enhancements.', theme: 'Baseline accessibility standards', themeCount: 25 }
     ],
     notes: [
       { author: 'Policy team', date: '3 April 2024', text: 'Access panel asked for wayfinding to be named explicitly in the policy wording, not just the supporting text.' }
@@ -156,8 +156,8 @@ const POLICIES = [
     consultationSummary: 'Residents supported more housing but doubted infrastructure would keep pace. Several respondents asked for clearer protection of residential amenity where housing adjoins late-night uses.',
     consultationResponseCount: 132,
     consultationResponses: [
-      { respondent: 'Residents\' Association', ref: 'Paragraphs 12, 19', comment: 'Supports more housing but doubts infrastructure will keep pace with the delivery trajectory.' },
-      { respondent: 'Home Builders Federation', ref: 'Paragraph 31', comment: 'Asks for the amenity requirements to be expressed as clear thresholds so schemes can be designed against them.' }
+      { respondent: 'Residents\' Association', ref: 'Paragraphs 12, 19', comment: 'Supports more housing but doubts infrastructure will keep pace with the delivery trajectory.', theme: 'Infrastructure delivery', themeCount: 71 },
+      { respondent: 'Home Builders Federation', ref: 'Paragraph 31', comment: 'Asks for the amenity requirements to be expressed as clear thresholds so schemes can be designed against them.', theme: 'Residential amenity thresholds', themeCount: 61 }
     ],
     notes: [
       { author: 'Policy team', date: '12 March 2024', text: 'Cross-check the delivery trajectory against the infrastructure evidence before the next draft.' },
@@ -235,8 +235,8 @@ const POLICIES = [
     consultationSummary: 'Business respondents supported the emphasis on modernisation. A minority argued for greater flexibility to convert surplus older stock to other uses.',
     consultationResponseCount: 74,
     consultationResponses: [
-      { respondent: 'London Chamber of Commerce', ref: 'Paragraphs 7, 12', comment: 'Supports the emphasis on modernisation of older stock rather than wholesale redevelopment.' },
-      { respondent: 'Small Business Forum', ref: 'Paragraph 21', comment: 'Asks for explicit support for flexible and affordable workspace for smaller occupiers.' }
+      { respondent: 'London Chamber of Commerce', ref: 'Paragraphs 7, 12', comment: 'Supports the emphasis on modernisation of older stock rather than wholesale redevelopment.', theme: 'Support for modernisation', themeCount: 44 },
+      { respondent: 'Small Business Forum', ref: 'Paragraph 21', comment: 'Asks for explicit support for flexible and affordable workspace for smaller occupiers.', theme: 'Flexible workspace provision', themeCount: 30 }
     ],
     notes: [
       { author: 'Policy team', date: '15 February 2024', text: 'Scoping responses flagged demand for flexible office space for small businesses — check this is reflected.' }
@@ -283,8 +283,8 @@ const POLICIES = [
     consultationSummary: 'Centre managers supported continued protection. Some landlords asked for more flexibility on upper floors where retail demand has fallen away.',
     consultationResponseCount: 29,
     consultationResponses: [
-      { respondent: 'Centre Management', ref: 'Paragraph 5', comment: 'Supports continued protection of the designated centres as the focus for retail activity.' },
-      { respondent: 'Retail Property Owners Group', ref: 'Paragraphs 14, 18', comment: 'Requests more flexibility on upper floors where retail demand has fallen away.' }
+      { respondent: 'Centre Management', ref: 'Paragraph 5', comment: 'Supports continued protection of the designated centres as the focus for retail activity.', theme: 'Support for centre protection', themeCount: 17 },
+      { respondent: 'Retail Property Owners Group', ref: 'Paragraphs 14, 18', comment: 'Requests more flexibility on upper floors where retail demand has fallen away.', theme: 'Upper floor flexibility', themeCount: 12 }
     ],
     notes: []
   },
@@ -335,8 +335,8 @@ const POLICIES = [
     consultationSummary: 'Cultural organisations strongly supported the protection. Questions were raised about what counts as "equivalent quality" replacement provision.',
     consultationResponseCount: 61,
     consultationResponses: [
-      { respondent: 'Music Venue Trust', ref: 'Paragraphs 9, 16', comment: 'Strongly supports protection, and asks that \'equivalent quality\' replacement provision be defined in the supporting text.' },
-      { respondent: 'Theatres Trust', ref: 'Paragraph 22', comment: 'Asks that lease insecurity be recognised as a cause of venue loss, not just redevelopment.' }
+      { respondent: 'Music Venue Trust', ref: 'Paragraphs 9, 16', comment: 'Strongly supports protection, and asks that \'equivalent quality\' replacement provision be defined in the supporting text.', theme: "Defining 'equivalent quality'", themeCount: 33 },
+      { respondent: 'Theatres Trust', ref: 'Paragraph 22', comment: 'Asks that lease insecurity be recognised as a cause of venue loss, not just redevelopment.', theme: 'Causes of venue loss', themeCount: 28 }
     ],
     notes: [
       { author: 'Culture team', date: '9 April 2024', text: 'Define "equivalent quality" in supporting text — raised repeatedly at the roundtable.' }
@@ -401,8 +401,8 @@ const POLICIES = [
     consultationSummary: 'Utility providers welcomed earlier engagement. Developers asked for clarity on what "designed in from the outset" means in practice at each application stage.',
     consultationResponseCount: 38,
     consultationResponses: [
-      { respondent: 'Thames Water', ref: 'Paragraphs 6, 11', comment: 'Welcomes earlier engagement, and asks that connection capacity be confirmed before layouts are fixed.' },
-      { respondent: 'UK Power Networks', ref: 'Paragraph 9', comment: 'Supports integration from the outset; requests clarity on what evidence is expected at each application stage.' }
+      { respondent: 'Thames Water', ref: 'Paragraphs 6, 11', comment: 'Welcomes earlier engagement, and asks that connection capacity be confirmed before layouts are fixed.', theme: 'Confirming connection capacity', themeCount: 22 },
+      { respondent: 'UK Power Networks', ref: 'Paragraph 9', comment: 'Supports integration from the outset; requests clarity on what evidence is expected at each application stage.', theme: 'Clarity at each application stage', themeCount: 16 }
     ],
     notes: [
       { author: 'Infrastructure team', date: '18 April 2024', text: 'Utility providers offered to help draft the supporting text on early engagement.' }
@@ -430,8 +430,8 @@ const POLICIES = [
     consultationSummary: 'Support in principle, with requests for the capacity evidence to be published and kept current so applicants can rely on it.',
     consultationResponseCount: 21,
     consultationResponses: [
-      { respondent: 'Thames Water', ref: 'Paragraph 4', comment: 'Asks that the capacity evidence be published and refreshed annually so applicants can rely on it.' },
-      { respondent: 'London Borough neighbours', ref: 'Paragraph 17', comment: 'Requests cross-boundary capacity to be considered where growth straddles the boundary.' }
+      { respondent: 'Thames Water', ref: 'Paragraph 4', comment: 'Asks that the capacity evidence be published and refreshed annually so applicants can rely on it.', theme: 'Publishing capacity evidence', themeCount: 13 },
+      { respondent: 'London Borough neighbours', ref: 'Paragraph 17', comment: 'Requests cross-boundary capacity to be considered where growth straddles the boundary.', theme: 'Cross-boundary capacity', themeCount: 8 }
     ],
     notes: []
   },
@@ -470,8 +470,8 @@ const POLICIES = [
     consultationSummary: 'Strong support from environmental groups. Some developers argued the assessment requirement should be proportionate to scheme size, and questioned the evidence for smaller buildings.',
     consultationResponseCount: 97,
     consultationResponses: [
-      { respondent: 'Environment Agency', ref: 'Paragraphs 23, 27', comment: 'Supports the retrofit-first approach and asks that whole life-cycle carbon assessment explicitly account for flood resilience measures.' },
-      { respondent: 'British Property Federation', ref: 'Paragraph 35', comment: 'Argues the assessment requirement should be proportionate to scheme size, with a clear threshold for smaller buildings.' }
+      { respondent: 'Environment Agency', ref: 'Paragraphs 23, 27', comment: 'Supports the retrofit-first approach and asks that whole life-cycle carbon assessment explicitly account for flood resilience measures.', theme: 'Flood resilience in assessments', themeCount: 52 },
+      { respondent: 'British Property Federation', ref: 'Paragraph 35', comment: 'Argues the assessment requirement should be proportionate to scheme size, with a clear threshold for smaller buildings.', theme: 'Proportionate assessment threshold', themeCount: 45 }
     ],
     notes: [
       { author: 'Design team', date: '22 February 2024', text: 'Need a clear threshold for what counts as "major" here — currently inconsistent with the transport policy.' }
@@ -548,8 +548,8 @@ const POLICIES = [
     consultationSummary: 'Transport bodies supported the approach. Businesses raised concerns about servicing restrictions and asked for consolidation to be encouraged rather than required.',
     consultationResponseCount: 67,
     consultationResponses: [
-      { respondent: 'Transport for London', ref: 'Paragraphs 10, 18', comment: 'Supports the approach to pedestrian comfort, and asks that servicing consolidation be encouraged through the policy.' },
-      { respondent: 'City Business Group', ref: 'Paragraph 26', comment: 'Raises concern that servicing restrictions could affect daily operations, and asks for consolidation to be encouraged rather than required.' }
+      { respondent: 'Transport for London', ref: 'Paragraphs 10, 18', comment: 'Supports the approach to pedestrian comfort, and asks that servicing consolidation be encouraged through the policy.', theme: 'Servicing consolidation', themeCount: 67 },
+      { respondent: 'City Business Group', ref: 'Paragraph 26', comment: 'Raises concern that servicing restrictions could affect daily operations, and asks for consolidation to be encouraged rather than required.', theme: 'Servicing consolidation', themeCount: 67 }
     ],
     notes: [
       { author: 'Transport team', date: 'March 2024', text: 'Officers raised concerns that public transport capacity may not keep pace with planned housing delivery.' }
@@ -632,8 +632,8 @@ const POLICIES = [
     consultationSummary: 'Amenity societies welcomed the emphasis on routes and roofscapes. Developers sought clarity on how the policy interacts with the tall buildings policy.',
     consultationResponseCount: 88,
     consultationResponses: [
-      { respondent: 'Historic England', ref: 'Paragraphs 11, 15', comment: 'Welcomes the emphasis on historic routes and roofscapes, and asks for clearer criteria for assessing harm to setting.' },
-      { respondent: 'Amenity Society', ref: 'Paragraph 28', comment: 'Asks how the policy is intended to interact with the tall buildings policy where the two pull in different directions.' }
+      { respondent: 'Historic England', ref: 'Paragraphs 11, 15', comment: 'Welcomes the emphasis on historic routes and roofscapes, and asks for clearer criteria for assessing harm to setting.', theme: 'Criteria for assessing harm', themeCount: 49 },
+      { respondent: 'Amenity Society', ref: 'Paragraph 28', comment: 'Asks how the policy is intended to interact with the tall buildings policy where the two pull in different directions.', theme: 'Interaction with tall buildings policy', themeCount: 39 }
     ],
     notes: [
       { author: 'Heritage team', date: '30 January 2024', text: 'Interaction with tall buildings policy needs resolving before submission.' }
@@ -692,8 +692,8 @@ const POLICIES = [
     consultationSummary: 'Widespread support for stronger protection. Several respondents asked for the green infrastructure network to be mapped in the plan rather than described.',
     consultationResponseCount: 115,
     consultationResponses: [
-      { respondent: 'Natural England', ref: 'Paragraphs 13, 20', comment: 'Supports treating green infrastructure as a network, and asks that the network be mapped in the plan rather than described.' },
-      { respondent: 'Sport England', ref: 'Paragraph 24', comment: 'Asks that provision standards distinguish between formal recreation space and incidental green space.' }
+      { respondent: 'Natural England', ref: 'Paragraphs 13, 20', comment: 'Supports treating green infrastructure as a network, and asks that the network be mapped in the plan rather than described.', theme: 'Mapping the green network', themeCount: 64 },
+      { respondent: 'Sport England', ref: 'Paragraph 24', comment: 'Asks that provision standards distinguish between formal recreation space and incidental green space.', theme: 'Distinguishing space types', themeCount: 51 }
     ],
     notes: [
       { author: 'Open spaces team', date: '6 March 2024', text: 'Mapping request came up in almost every session — worth a decision before the next draft.' }
@@ -752,8 +752,8 @@ const POLICIES = [
     consultationSummary: 'Support for the cooling hierarchy. Some respondents wanted mechanical cooling ruled out more firmly; others warned this would be unworkable for some building types.',
     consultationResponseCount: 53,
     consultationResponses: [
-      { respondent: 'Environment Agency', ref: 'Paragraphs 23, 27', comment: 'Supports the cooling hierarchy and asks that overheating and surface water flood risk be assessed together rather than separately.' },
-      { respondent: 'Chartered Institution of Building Services Engineers', ref: 'Paragraph 30', comment: 'Warns that ruling out mechanical cooling entirely would be unworkable for some building types.' }
+      { respondent: 'Environment Agency', ref: 'Paragraphs 23, 27', comment: 'Supports the cooling hierarchy and asks that overheating and surface water flood risk be assessed together rather than separately.', theme: 'Assessing risks together', themeCount: 29 },
+      { respondent: 'Chartered Institution of Building Services Engineers', ref: 'Paragraph 30', comment: 'Warns that ruling out mechanical cooling entirely would be unworkable for some building types.', theme: 'Mechanical cooling workability', themeCount: 24 }
     ],
     notes: []
   },
@@ -801,6 +801,13 @@ function hasFullSummary (policy) {
   return Boolean(policy.evidenceSummary)
 }
 
+// Every strategic policy in the plan is numbered S1-S16 (one per chapter, or per major topic
+// within a chapter) — a plain "S" + digits ref, distinct from a chapter's other policy refs
+// (e.g. HL1, DE3), which always start with a topic prefix.
+function isStrategicPolicy (ref) {
+  return /^S\d+$/.test(ref)
+}
+
 // Terms offered by the evidence search's type-ahead: the titles of the
 // policies with a full summary, plus the themes officers commonly search the
 // evidence base for. List-only policies are left out — there's no evidence
@@ -833,13 +840,17 @@ function getSearchTerms () {
 }
 
 // hasSummary tells the policy list whether to render the policy as a link to
-// its summary page or as plain text.
+// its summary page or as plain text. isStrategic tells it whether to show the
+// "Strategic Policy" tag.
 function getPoliciesForArea (policyArea) {
   if (!policyArea) return []
 
   return POLICIES
     .filter(policy => policy.policyArea === policyArea)
-    .map(policy => Object.assign({}, policy, { hasSummary: hasFullSummary(policy) }))
+    .map(policy => Object.assign({}, policy, {
+      hasSummary: hasFullSummary(policy),
+      isStrategic: isStrategicPolicy(policy.ref)
+    }))
 }
 
 // Only the worked examples have a summary page, so a ref for a list-only
@@ -866,5 +877,6 @@ module.exports = {
   getSearchTerms,
   getPoliciesForArea,
   getPolicy,
-  getPolicyRefsForSource
+  getPolicyRefsForSource,
+  isStrategicPolicy
 }

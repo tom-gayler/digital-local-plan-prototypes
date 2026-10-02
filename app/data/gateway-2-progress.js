@@ -193,11 +193,11 @@ const CHAPTER_AUDIT_LOG = {
 // than authored separately, so the detail table on the chapter page always agrees with the
 // status already shown for that chapter on the Plan Progress page.
 const STAGE_STATUS_BY_CHAPTER_STATUS = {
-  'Not started': { brief: 'Not started', sources: 'Not started', evidence: 'Not started', responses: 'Not started', policyText: 'Not started' },
-  'Brief prepared': { brief: 'Completed', sources: 'Not started', evidence: 'Not started', responses: 'Not started', policyText: 'Not started' },
-  'In progress': { brief: 'Completed', sources: 'Completed', evidence: 'In progress', responses: 'In progress', policyText: 'In progress' },
-  Drafted: { brief: 'Completed', sources: 'Completed', evidence: 'Completed', responses: 'Completed', policyText: 'In progress' },
-  Complete: { brief: 'Completed', sources: 'Completed', evidence: 'Completed', responses: 'Completed', policyText: 'Completed' }
+  'Not started': { brief: 'Not started', sources: 'Not started', evidence: 'Not started', representations: 'Not started', policyText: 'Not started' },
+  'Brief prepared': { brief: 'Completed', sources: 'Not started', evidence: 'Not started', representations: 'Not started', policyText: 'Not started' },
+  'In progress': { brief: 'Completed', sources: 'Completed', evidence: 'In progress', representations: 'In progress', policyText: 'In progress' },
+  Drafted: { brief: 'Completed', sources: 'Completed', evidence: 'Completed', representations: 'Completed', policyText: 'In progress' },
+  Complete: { brief: 'Completed', sources: 'Completed', evidence: 'Completed', representations: 'Completed', policyText: 'Completed' }
 }
 
 // A policy's own status (shown against each policy in the chapter page's Policy Text section)

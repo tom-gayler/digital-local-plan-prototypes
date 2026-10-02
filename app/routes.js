@@ -137,6 +137,7 @@ const PLAN_PARAGRAPHS = POLICY_AREAS.flatMap(area =>
       policyRef: policy.ref,
       policyTitle: policy.title,
       policyArea: area,
+      isStrategic: policy.isStrategic,
       sectionTitle: paragraph.sectionTitle,
       text: paragraph.text
     }))
@@ -1613,8 +1614,9 @@ router.post('/policy-writing/:variant/write/:topicId/policy-blocks', (req, res) 
 // An external (non-LPA-staff) view of the submitted Local Plan for an independent planning
 // inspector: a sidebar showing the plan's chapters (policy areas) and policies, and a
 // paragraph-by-paragraph viewer for each policy's text with its related evidence, consultation
-// comments and NPPF/SDS policy references. See app/data/plan-paragraphs.js for the paragraph
-// and NPPF/SDS content this prototype adds on top of policies.js and evidence-excerpts.js.
+// representations and NPPF/SDS policy references. See app/data/plan-paragraphs.js for the
+// paragraph and NPPF/SDS content this prototype adds on top of policies.js and
+// evidence-excerpts.js.
 
 // One sidebar section per chapter (policy area), each policy in it linking to its first
 // paragraph. activePolicyRef highlights whichever policy the current page belongs to.
@@ -1629,29 +1631,50 @@ function buildLocalPlanSidebarSections (activePolicyRef) {
   }))
 }
 
-// Related evidence, consultation comments and NPPF/SDS references for a policy, normalised
-// into one shape so the right-hand resource panel doesn't need to know which kind it's
-// showing. Content is at policy level, not paragraph level, since none of the underlying data
-// (evidence-excerpts.js, policies.js's consultationResponses, plan-paragraphs.js) is broken
-// down any finer than that. Returned as separate lists (rather than one flat list the template
-// would need to group by kind) plus "all" for the resource panel, which doesn't care which
-// kind an item is.
-function buildRelatedResources (policy) {
+// Related evidence, consultation representations and NPPF/SDS references for a policy,
+// normalised into one shape so the right-hand resource panel doesn't need to know which kind
+// it's showing. Content is at policy level, not paragraph level, since none of the underlying
+// data (evidence-excerpts.js, policies.js's consultationResponses, plan-paragraphs.js) is
+// broken down any finer than that. Returned as separate lists (rather than one flat list the
+// template would need to group by kind) plus "all" for the resource panel, which doesn't care
+// which kind an item is.
+function buildRelatedResources (policy, paragraphId) {
+  // officerComment reuses the same commentary Gateway 2 progress check shows under a source/
+  // evidence item (app/data/gateway-2-progress.js) — one officer's read of an evidence item
+  // shouldn't read differently depending which prototype it's viewed from. Only evidence has
+  // one today; representations and NPPF/SDS references fall back to "No officer comment" in
+  // the template.
   const evidence = EVIDENCE_EXCERPTS
     .filter(excerpt => excerpt.policyRefs.includes(policy.ref))
     .map((excerpt, index) => ({
       id: 'evidence-' + index,
       title: excerpt.source,
       meta: excerpt.ref,
-      text: excerpt.text
+      text: excerpt.text,
+      officerComment: getEvidenceOfficerNote(excerpt)
     }))
 
-  const comments = (policy.consultationResponses || []).map((response, index) => ({
-    id: 'comment-' + index,
-    title: response.respondent,
-    meta: response.ref,
-    text: response.comment
-  }))
+  // Grouped by theme rather than shown as individual representations — each theme carries the
+  // total representations count (policies.js's themeCount) plus the individual comments sample
+  // for it, shown when the theme is opened in the resource viewer.
+  const responsesByTheme = new Map()
+  ;(policy.consultationResponses || []).forEach(response => {
+    if (!responsesByTheme.has(response.theme)) {
+      responsesByTheme.set(response.theme, { theme: response.theme, count: response.themeCount, responses: [] })
+    }
+    responsesByTheme.get(response.theme).responses.push(response)
+  })
+
+  const representations = Array.from(responsesByTheme.values()).map((group, index) => {
+    const id = 'representation-' + index
+    return {
+      id,
+      title: group.theme,
+      meta: group.count + (group.count === 1 ? ' representation' : ' representations'),
+      responses: group.responses,
+      href: '/examination-inspector-view/paragraphs/' + paragraphId + '/representations/' + id
+    }
+  })
 
   const nationalPolicy = NATIONAL_POLICY_REFERENCES
     .filter(reference => reference.policyRefs.includes(policy.ref))
@@ -1664,9 +1687,9 @@ function buildRelatedResources (policy) {
 
   return {
     evidence,
-    comments,
+    representations,
     nationalPolicy,
-    all: evidence.concat(comments, nationalPolicy)
+    all: evidence.concat(representations, nationalPolicy)
   }
 }
 
@@ -1687,7 +1710,29 @@ router.get('/examination-inspector-view/paragraphs/:id', (req, res) => {
     paragraph,
     previousParagraph: PLAN_PARAGRAPHS[index - 1] || null,
     nextParagraph: PLAN_PARAGRAPHS[index + 1] || null,
-    relatedResources: buildRelatedResources(policy),
+    relatedResources: buildRelatedResources(policy, paragraph.id),
+    sidebarSections: buildLocalPlanSidebarSections(paragraph.policyRef)
+  })
+})
+
+// A theme's full representations list — reached via "See all representations" from the
+// paragraph's resource viewer. Representations are policy-level data (like the rest of
+// buildRelatedResources), but the route is nested under the paragraph the user came from so
+// the back link returns them to exactly where they were reading.
+router.get('/examination-inspector-view/paragraphs/:id/representations/:themeId', (req, res) => {
+  const index = PLAN_PARAGRAPHS.findIndex(paragraph => paragraph.id === req.params.id)
+  if (index === -1) return res.redirect('/examination-inspector-view')
+
+  const paragraph = PLAN_PARAGRAPHS[index]
+  const policy = POLICIES.find(policy => policy.ref === paragraph.policyRef)
+  const theme = buildRelatedResources(policy, paragraph.id).representations
+    .find(representation => representation.id === req.params.themeId)
+
+  if (!theme) return res.redirect('/examination-inspector-view/paragraphs/' + paragraph.id)
+
+  res.render('examination-inspector-view/representations/show.html', {
+    paragraph,
+    theme,
     sidebarSections: buildLocalPlanSidebarSections(paragraph.policyRef)
   })
 })
@@ -2014,6 +2059,7 @@ router.get('/gateway-2-progress-check', (req, res) => {
   const evidence = Object.keys(DOCUMENTS).map(source => ({
     name: source,
     status: getEvidenceStatus(source),
+    lastUpdated: DOCUMENTS[source].date,
     href: '/gateway-2-progress-check/evidence/' + encodeURIComponent(source)
   }))
 
@@ -2050,13 +2096,18 @@ function buildChapterResources (area) {
       officerNote: getEvidenceOfficerNote(excerpt)
     }, excerpt))
 
-  const responses = policies.flatMap(policy =>
-    (policy.consultationResponses || []).map(response =>
-      Object.assign({ policyRef: policy.ref, policyTitle: policy.title }, response)))
+  // Grouped into themes the same way as Examination - inspector view (buildRelatedResources,
+  // reused per policy below) rather than a second, independent grouping — a theme should look
+  // the same wherever an inspector encounters it. policyRef/policyTitle are added here because
+  // this list spans every policy in the chapter, unlike buildRelatedResources's single-policy
+  // callers, which don't need to say which policy a theme belongs to.
+  const representations = policies.flatMap(policy =>
+    buildRelatedResources(policy, policy.ref.toLowerCase() + '-1').representations
+      .map(theme => Object.assign({ policyRef: policy.ref, policyTitle: policy.title }, theme)))
 
   const paragraphs = PLAN_PARAGRAPHS.filter(paragraph => paragraph.policyArea === area)
 
-  return { sources, evidence, responses, paragraphs }
+  return { sources, evidence, representations, paragraphs }
 }
 
 router.get('/gateway-2-progress-check/chapters/:area', (req, res) => {

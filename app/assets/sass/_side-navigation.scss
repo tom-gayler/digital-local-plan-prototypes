@@ -1,9 +1,12 @@
-// Layout: sidebar + content grid (used by layouts/main-with-sidebar.html)
+// Layout: sidebar + content grid (used by layouts/main-with-sidebar.html). Items stretch
+// (the grid default) rather than sizing to their own content, so the sidebar column is always
+// as tall as the row — needed so its background (below, on .app-side-navigation) can fill the
+// full height instead of stopping wherever the sidebar's own (often shorter) content ends.
 .app-sidebar-layout {
   @include govuk-media-query($from: tablet) {
     display: grid;
     grid-template-columns: 320px 1fr;
-    align-items: start;
+    column-gap: govuk-spacing(6);
   }
 }
 
@@ -26,6 +29,10 @@
   @include govuk-font($size: 16);
   background-color: govuk-colour("black", $variant: "tint-95");
   padding: govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    min-height: 100%;
+  }
 }
 
 .app-side-navigation__title {

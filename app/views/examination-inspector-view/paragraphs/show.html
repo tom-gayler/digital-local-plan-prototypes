@@ -42,6 +42,9 @@
     <div>
       <h2 class="govuk-heading-m govuk-!-margin-top-6">
         {{ paragraph.policyRef }} {{ paragraph.policyTitle }}
+        {% if paragraph.isStrategic %}
+        <strong class="govuk-tag govuk-!-margin-left-2">Strategic Policy</strong>
+        {% endif %}
       </h2>
 
       <div class="govuk-inset-text">
@@ -97,22 +100,22 @@
       </p>
       {% endif %}
     </div>
-    <h3 class="govuk-heading-m">Comments</h3>
-    {% if relatedResources.comments.length %}
+    <h3 class="govuk-heading-m">Representations</h3>
+    {% if relatedResources.representations.length %}
     <table class="govuk-table">
       <caption
         class="govuk-table__caption govuk-table__caption--m govuk-visually-hidden"
       >
-        Comments related to this paragraph
+        Representation themes related to this paragraph
       </caption>
       <thead class="govuk-table__head">
         <tr class="govuk-table__row">
-          <th class="govuk-table__header" scope="col">Title</th>
-          <th class="govuk-table__header" scope="col">Reference</th>
+          <th class="govuk-table__header" scope="col">Theme</th>
+          <th class="govuk-table__header" scope="col">Representations</th>
         </tr>
       </thead>
       <tbody class="govuk-table__body">
-        {% for item in relatedResources.comments %}
+        {% for item in relatedResources.representations %}
         <tr class="govuk-table__row">
           <td class="govuk-table__cell">
             <a
@@ -130,7 +133,7 @@
     </table>
     {% else %}
     <p class="govuk-body-s dlp-document-hint">
-      No comments for this policy in this prototype yet.
+      No representations for this policy in this prototype yet.
     </p>
     {% endif %}
 
@@ -187,8 +190,26 @@
         hidden
       >
         <h2 class="govuk-heading-m">{{ item.title }}</h2>
-        <p class="govuk-body-s dlp-document-hint">{{ item.meta }}</p>
+        <p class="govuk-body-s dlp-document-hint">
+          {{ item.meta }}
+          {% if item.href %}<a class="govuk-link" href="{{ item.href }}">See all representations</a>{% endif %}
+        </p>
+
+        {% if item.responses %}
+        <ul class="govuk-list">
+          {% for response in item.responses %}
+          <li class="govuk-!-margin-bottom-4">
+            <p class="govuk-body">{{ response.comment }}</p>
+            <p class="govuk-body-s dlp-document-hint">{{ response.respondent }}, {{ response.ref }}</p>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
         <p class="govuk-body">{{ item.text }}</p>
+        {% endif %}
+
+        <h3 class="govuk-heading-s">Officer comment</h3>
+        <p class="govuk-body">{{ item.officerComment if item.officerComment else "No officer comment" }}</p>
       </div>
       {% endfor %}
     </div>
