@@ -10,8 +10,10 @@
     {% from "partials/timeline/macro.njk" import appTimeline %}
     {{ appTimeline({ entries: chapter.history | reverse }) }}
 
-  params.entries: array of { type, description, date, actor, status? } — status is optional;
-    when present the entry's marker fills in and the status text shows, e.g. "Done".
+  params.entries: array of { type, description, date, actor, status?, document?, documentHref? }
+    — status is optional; when present the entry's marker fills in and the status text shows,
+    e.g. "Done". document/documentHref are optional too (only some entries produce a linkable
+    material) — when both are present, the entry's description is followed by a link to it.
   params.caption: string (optional) — defaults to a stock "this is example content" caveat,
     since every consumer so far is read-only illustrative content rather than a real log.
 #}
@@ -30,6 +32,9 @@
       </p>
 
       <p class="app-timeline__text">{{ entry.description }}</p>
+      {% if entry.document and entry.documentHref %}
+        <p class="app-timeline__text"><a class="govuk-link" href="{{ entry.documentHref }}">{{ entry.document }}</a></p>
+      {% endif %}
       <p class="app-timeline__meta">{{ entry.date }} &middot; {{ entry.actor }}</p>
     </li>
   {% endfor %}
