@@ -1,0 +1,24 @@
+{% extends "layouts/main.html" %}
+
+{% from "policy-writing-drafting/partials/evidence-viewer.html" import evidenceViewerContent, evidenceSourcePicker %}
+
+{% set pageName = "Evidence viewer: " + chapter.name %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+    <span class="govuk-caption-l">{{ chapter.name }}</span>
+    <h1 class="govuk-heading-l">Evidence viewer</h1>
+
+    {% if viewerSources | length %}
+      {{ evidenceSourcePicker("/policy-writing-drafting/chapters/" + chapter.id + "/viewer", viewerSources, viewerSource, {}) }}
+    {% endif %}
+
+    <div class="dlp-pd-viewer govuk-!-margin-top-6">
+      {{ evidenceViewerContent(viewerSource, viewerContent) }}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

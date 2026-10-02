@@ -1,0 +1,184 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "evidence/commissioned/partials/comment.html" import ceComment %}
+{% from "evidence/commissioned/partials/document-history.html" import ceDocumentHistory %}
+{% from "evidence/commissioned/partials/handoff.html" import ceHandoff %}
+
+{% set pageName = "Review and comment" %}
+
+{% block content %}
+
+{# Held to the GOV.UK page width — see .dlp-ce-page. #}
+<div class="dlp-ce-page">
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Review and comment" }
+] }) }}
+
+{% if errorList.length %}
+  {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+{% endif %}
+
+<div class="dlp-ce-page-head">
+  <div>
+    <div class="dlp-ce-title-row">
+      <h1 class="govuk-heading-l govuk-!-margin-bottom-0">Review and comment</h1>
+      {% if commission.status == "accepted" %}
+        {{ govukTag({ text: "Accepted", classes: "govuk-tag--green" }) }}
+      {% else %}
+        {{ govukTag({ text: "Draft", classes: "govuk-tag--grey" }) }}
+      {% endif %}
+    </div>
+    <p class="govuk-body-s dlp-ce-muted govuk-!-margin-top-1">Logged in as {{ viewer }}</p>
+  </div>
+  {% if commission.stage == "submitted" %}
+    <ul class="dlp-ce-page-links">
+      <li><a class="govuk-link" href="#comments">View all comments</a></li>
+      <li><a class="govuk-link" href="/evidence/commissioned/notes">Add or view notes</a></li>
+      <li><a class="govuk-link" href="#document-history">Document history</a></li>
+    </ul>
+  {% endif %}
+</div>
+
+{% if commission.stage != "submitted" %}
+
+  <div class="dlp-ce-measure">
+    <p class="govuk-body">
+      Waiting for {{ commission.brief.consultant.name }} to submit a draft of
+      <strong>{{ commission.brief.title }}</strong>. The brief was sent on {{ commission.brief.commencedOn }}.
+    </p>
+    <p class="govuk-body">You can still <a class="govuk-link" href="/evidence/commissioned/notes">add or view notes</a> while you wait.</p>
+
+    {{ ceHandoff({
+      text: "Nothing to review until the consultant submits. Switch to them to submit a report.",
+      linkText: "Switch to " + commission.brief.consultant.name + " (consultant)",
+      href: "/evidence/commissioned/consultant/submit-report"
+    }) }}
+
+    <h2 class="govuk-heading-m" id="document-history">Document history</h2>
+    {{ ceDocumentHistory(history) }}
+  </div>
+
+{% else %}
+
+  <div class="dlp-ce-review">
+
+    <section class="dlp-ce-document" aria-labelledby="document-title">
+      {# Toolbar from the design, inert until there is an editor behind it. #}
+      <div class="dlp-ce-document__toolbar" aria-hidden="true">
+        {% for label in ["Bold", "Italic", "Strikethrough", "H1", "H2", "UL", "OL", "Image", "Comment"] %}
+          <button type="button" class="dlp-editor-toolbar__button" tabindex="-1">{{ label }}</button>
+        {% endfor %}
+      </div>
+      <div class="dlp-ce-document__body">
+        <h2 class="govuk-heading-l" id="document-title">{{ commission.report.title }}</h2>
+        <p class="govuk-body-s dlp-ce-muted">
+          By {{ commission.brief.consultant.name }}{% if commission.brief.consultant.organisation %}, {{ commission.brief.consultant.organisation }}{% endif %}
+          · Submitted {{ commission.report.submittedAt }}
+        </p>
+        {% for paragraph in paragraphs %}
+          <div class="dlp-ce-paragraph {%- if paragraph.highlighted %} dlp-ce-paragraph--commented{% endif %}" id="paragraph-{{ paragraph.id }}">
+            <p class="govuk-body dlp-ce-paragraph__text">
+              {{ paragraph.text }}
+              {% for mark in paragraph.comments %}
+                <a class="govuk-link dlp-ce-marker {%- if mark.resolved %} dlp-ce-marker--resolved{% endif %}" href="#comment-{{ mark.id }}">[{{ mark.number }}]<span class="govuk-visually-hidden"> Go to comment {{ mark.number }}{% if mark.resolved %} (resolved){% endif %}</span></a>
+              {% endfor %}
+            </p>
+          </div>
+        {% endfor %}
+
+        {% if commission.report.links.length or commission.report.files.length %}
+          <h3 class="govuk-heading-s govuk-!-margin-top-6">Links and files supplied with the report</h3>
+          <ul class="govuk-list govuk-list--bullet">
+            {% for link in commission.report.links %}
+              <li><a class="govuk-link dlp-ce-break" href="{{ link }}" rel="noreferrer noopener" target="_blank">{{ link }}<span class="govuk-visually-hidden"> (opens in a new tab)</span></a></li>
+            {% endfor %}
+            {% for file in commission.report.files %}<li>{{ file }}</li>{% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="dlp-ce-comments" id="comments" aria-labelledby="comments-title" tabindex="-1">
+      <div class="dlp-ce-comments__head">
+        <h2 class="govuk-heading-m govuk-!-margin-bottom-0" id="comments-title">Comments ({{ openCount }} open)</h2>
+        {% if openCount > 1 %}
+          <form method="post" action="/evidence/commissioned/review/resolve-all" class="dlp-ce-inline-form" novalidate>
+            <button type="submit" class="dlp-ce-link-button">Resolve all</button>
+          </form>
+        {% endif %}
+      </div>
+      <p class="govuk-body-s govuk-!-margin-bottom-3"><a class="govuk-link" href="#add-comment">+ Add a comment</a></p>
+
+      {% for comment in comments %}
+        {% if not comment.resolved %}{{ ceComment(comment, { context: "review", errors: errors }) }}{% endif %}
+      {% endfor %}
+      {% if not openCount %}
+        <p class="govuk-body">{{ "No open comments." if comments.length else "No comments yet." }}</p>
+      {% endif %}
+
+      {% set resolvedCount = comments.length - openCount %}
+      {% if resolvedCount %}
+        <details class="govuk-details govuk-!-margin-top-4">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Resolved comments ({{ resolvedCount }})</span>
+          </summary>
+          <div class="govuk-details__text">
+            {% for comment in comments %}
+              {% if comment.resolved %}{{ ceComment(comment, { context: "review" }) }}{% endif %}
+            {% endfor %}
+          </div>
+        </details>
+      {% endif %}
+
+      <form method="post" action="/evidence/commissioned/review/comments" class="dlp-ce-add-comment" id="add-comment" tabindex="-1" novalidate>
+        <h3 class="govuk-heading-s">Add a comment</h3>
+        {% set anchorItems = [{ value: "", text: "General comment, on the whole report" }] %}
+        {% for paragraph in paragraphs %}
+          {% set anchorItems = (anchorItems.push({
+            value: paragraph.id,
+            text: "Paragraph " + paragraph.position + ": " + (paragraph.text | truncate(48, true, "…"))
+          }), anchorItems) %}
+        {% endfor %}
+        {{ govukSelect({
+          id: "anchor",
+          name: "_anchor",
+          classes: "dlp-ce-full-width",
+          label: { text: "What it's about" },
+          items: anchorItems
+        }) }}
+        {{ govukTextarea({
+          id: "comment",
+          name: "_comment",
+          rows: 3,
+          label: { text: "Comment" },
+          errorMessage: { text: errors.comment } if errors.comment
+        }) }}
+        {{ govukButton({ text: "Add comment", classes: "govuk-button--secondary govuk-!-margin-bottom-0" }) }}
+      </form>
+    </section>
+
+  </div>
+
+  <div class="govuk-button-group govuk-!-margin-top-6">
+    {% if commission.status == "accepted" %}
+      {{ govukButton({ text: "Go to Manage source", href: "/evidence/commissioned/source" }) }}
+    {% else %}
+      {{ govukButton({ text: "Continue to accept and save", href: "/evidence/commissioned/accept" }) }}
+    {% endif %}
+    <a class="govuk-link" href="/evidence/commissioned/notes">Add or view notes</a>
+  </div>
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+  <h2 class="govuk-heading-m" id="document-history" tabindex="-1">Document history</h2>
+  {{ ceDocumentHistory(history) }}
+
+{% endif %}
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,212 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "govuk/components/pagination/macro.njk" import govukPagination %}
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+
+{% set pageName = "Add sources" %}
+{% set sourcesUrl = "/policy-writing-drafting/chapters/" + chapter.id + "/sources" %}
+
+{# A select whose first option means "no filter". #}
+{% macro filterSelect(id, name, label, options, selected) %}
+  {% set items = [{ value: "", text: "Select…" }] %}
+  {% for option in options %}
+    {% set items = (items.push({ value: option, text: option, selected: option == selected }), items) %}
+  {% endfor %}
+  {{ govukSelect({ id: id, name: name, label: { text: label }, items: items, classes: "dlp-pd-filter__select" }) }}
+{% endmacro %}
+
+{% block content %}
+<div class="dlp-pd-page-width">
+
+{{ chapterBreadcrumbs(chapter, "Add sources") }}
+
+{% if addedCount %}
+  {{ govukNotificationBanner({
+    type: "success",
+    html: '<p class="govuk-notification-banner__heading">' + addedCount + ' source' + ('' if addedCount == 1 else 's') + ' added to ' + (chapter.name | escape) + '</p>' +
+          '<p class="govuk-body"><a class="govuk-notification-banner__link" href="#pd-existing">View existing sources</a></p>'
+  }) }}
+{% endif %}
+
+<h1 class="govuk-heading-xl">Add sources</h1>
+<p class="govuk-body">Add evidence sources relevant to the {{ chapter.name }} chapter. You can change these later.</p>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<h2 class="govuk-heading-m" id="pd-existing">Existing sources</h2>
+<table class="govuk-table dlp-pd-table">
+  <caption class="govuk-table__caption govuk-visually-hidden">Sources added to this chapter</caption>
+  <thead class="govuk-table__head dlp-pd-table__head--shaded">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header">Source name</th>
+      <th scope="col" class="govuk-table__header">Source type</th>
+      <th scope="col" class="govuk-table__header govuk-table__header--numeric">Actions</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for source in chapterSources %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">{{ source.name }}</td>
+        <td class="govuk-table__cell govuk-!-font-size-16">{{ source.type }}</td>
+        <td class="govuk-table__cell govuk-table__cell--numeric">
+          <form class="dlp-inline-form" method="post" action="{{ sourcesUrl }}/{{ source.id }}/remove">
+            <input type="hidden" name="_page" value="{{ page }}">
+            <button type="submit" class="dlp-link-button">Remove<span class="govuk-visually-hidden"> {{ source.name }}</span></button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell" colspan="3">No sources added yet. Search the evidence library below.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{#
+  Search and filters are one GET form, so a search always carries the current filters and
+  a filter change keeps the current search. The type-ahead (initSuggestSearch) offers terms from
+  the library as the user types; choosing one submits the form. Without JavaScript it is an
+  ordinary search box and button.
+#}
+<form method="get" action="{{ sourcesUrl }}#pd-results" class="govuk-!-margin-top-8">
+  <div class="govuk-form-group">
+    <label class="govuk-label govuk-label--m" for="pd-search">Search for evidence by keyword</label>
+    <div class="govuk-hint" id="pd-search-hint">
+      Start typing a word such as &ldquo;housing&rdquo; to see suggested matches, or search for a title or author name
+    </div>
+    <div class="dlp-suggest dlp-pd-search" data-dlp-suggest data-dlp-suggest-source="#pd-search-terms">
+      <input class="govuk-input" id="pd-search" name="pdSearch" type="search" value="{{ filters.query }}"
+             autocomplete="off" spellcheck="false"
+             role="combobox" aria-autocomplete="list" aria-expanded="false"
+             aria-controls="pd-search-suggestions" aria-describedby="pd-search-hint"
+             data-dlp-suggest-input>
+      <ul class="dlp-typeahead dlp-suggest__list" id="pd-search-suggestions" role="listbox"
+          aria-label="Suggested matches" data-dlp-suggest-list hidden></ul>
+      <p class="govuk-visually-hidden" role="status" aria-live="polite" data-dlp-suggest-status></p>
+    </div>
+  </div>
+
+  <p class="govuk-body">
+    {# Placeholder from the design — does nothing yet. #}
+    <button type="button" class="dlp-link-button">+ Add new source</button>
+  </p>
+
+  <h2 class="govuk-heading-m">Filter results</h2>
+  {# data-dlp-autosubmit: with JavaScript a filter applies as soon as it is changed. #}
+  <div class="dlp-pd-filters" data-dlp-autosubmit>
+    {{ filterSelect("pd-source-type", "pdSourceType", "Source type", sourceTypes, filters.type) }}
+    {{ filterSelect("pd-policy-area", "pdPolicyArea", "Policy area", policyAreas, filters.area) }}
+    {{ filterSelect("pd-designation", "pdDesignation", "Planning designation", designations, filters.designation) }}
+    {{ filterSelect("pd-site", "pdSite", "Site", sites, filters.site) }}
+  </div>
+
+  <div class="govuk-button-group">
+    {{ govukButton({ text: "Search", classes: "govuk-button--secondary" }) }}
+    {% if searched %}
+      <a class="govuk-link" href="{{ sourcesUrl }}?pdSearch=&pdSourceType=&pdPolicyArea=&pdDesignation=&pdSite=">Clear search and filters</a>
+    {% endif %}
+  </div>
+</form>
+
+<script type="application/json" id="pd-search-terms">{{ searchTermsJson | safe }}</script>
+
+{% if searched %}
+  <h2 class="govuk-heading-m govuk-!-margin-top-6" id="pd-results">
+    Search results{% if filters.query %} for &ldquo;{{ filters.query }}&rdquo;{% endif %}
+  </h2>
+  {% if results | length %}
+    {#
+      Tick any number of results and add them together. data-dlp-select-all wires up the header
+      checkbox and the running count (initSelectAll); without JavaScript the header checkbox
+      stays hidden and each row is ticked on its own.
+    #}
+    <form method="post" action="{{ sourcesUrl }}/add" data-dlp-select-all>
+      <input type="hidden" name="_page" value="{{ page }}">
+      <table class="govuk-table dlp-pd-table dlp-pd-results" aria-describedby="pd-results-count">
+        <caption class="govuk-table__caption govuk-visually-hidden">Search results</caption>
+        <thead class="govuk-table__head dlp-pd-table__head--shaded">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header dlp-pd-results__select">
+              <div class="govuk-checkboxes govuk-checkboxes--small" hidden data-dlp-select-all-control>
+                <div class="govuk-checkboxes__item">
+                  <input class="govuk-checkboxes__input" id="pd-select-all" type="checkbox" data-dlp-select-all-toggle>
+                  <label class="govuk-label govuk-checkboxes__label" for="pd-select-all">
+                    <span class="govuk-visually-hidden">Select all results on this page</span>
+                  </label>
+                </div>
+              </div>
+              <span class="govuk-visually-hidden" data-dlp-select-all-fallback>Select</span>
+            </th>
+            <th scope="col" class="govuk-table__header">Source name</th>
+            <th scope="col" class="govuk-table__header">Source type</th>
+            <th scope="col" class="govuk-table__header">Status</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for source in results %}
+            {% set alreadyAdded = source.id in chapter.sources %}
+            <tr class="govuk-table__row{% if alreadyAdded %} dlp-pd-results__row--added{% endif %}">
+              <td class="govuk-table__cell dlp-pd-results__select">
+                {% if alreadyAdded %}
+                  <strong class="govuk-tag govuk-tag--grey">Added</strong>
+                {% else %}
+                  <div class="govuk-checkboxes govuk-checkboxes--small">
+                    <div class="govuk-checkboxes__item">
+                      <input class="govuk-checkboxes__input" id="pd-result-{{ source.id }}" name="_sourceIds" type="checkbox" value="{{ source.id }}" data-dlp-select-all-item>
+                      <label class="govuk-label govuk-checkboxes__label" for="pd-result-{{ source.id }}">
+                        <span class="govuk-visually-hidden">Select {{ source.name }}</span>
+                      </label>
+                    </div>
+                  </div>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                {{ source.name }}
+              </td>
+              <td class="govuk-table__cell govuk-!-font-size-16">{{ source.type }}</td>
+              <td class="govuk-table__cell">
+                <strong class="govuk-tag govuk-tag--{{ statusColours[source.status] }}">{{ source.status }}</strong>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="dlp-pd-results-footer">
+        <p class="govuk-body-s dlp-pd-muted govuk-!-margin-0" id="pd-results-count">
+          Showing {{ firstResult }} to {{ lastResult }} of {{ resultCount }} results
+        </p>
+        {% if pageCount > 1 %}
+          {{ govukPagination({
+            previous: { href: sourcesUrl + "?_page=" + (page - 1) + "#pd-results" } if page > 1 else undefined,
+            next: { href: sourcesUrl + "?_page=" + (page + 1) + "#pd-results" } if page < pageCount else undefined,
+            classes: "govuk-!-margin-0"
+          }) }}
+        {% endif %}
+      </div>
+
+      <div class="govuk-button-group">
+        {{ govukButton({ text: "Add selected sources", classes: "govuk-button--secondary", attributes: { "data-dlp-select-all-submit": "" } }) }}
+        <p class="govuk-body govuk-!-margin-0 dlp-pd-muted" role="status" aria-live="polite" data-dlp-select-all-count></p>
+      </div>
+      {% if pageCount > 1 %}
+        <p class="govuk-body-s dlp-pd-muted">Add what you've selected before moving to another page of results.</p>
+      {% endif %}
+    </form>
+  {% else %}
+    <p class="govuk-body">No sources match. Try another word, or clear a filter.</p>
+  {% endif %}
+{% endif %}
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m dlp-pd-short-rule" />
+
+<div class="govuk-button-group">
+  {{ govukButton({ text: "Save and continue", href: "/policy-writing-drafting/chapters/" + chapter.id + "/policies" }) }}
+  {{ govukButton({ text: "Back", classes: "govuk-button--secondary", href: "/policy-writing-drafting/chapters/" + chapter.id + "/explanatory-text" }) }}
+</div>
+
+</div>
+{% endblock %}

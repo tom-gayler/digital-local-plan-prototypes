@@ -1,0 +1,19 @@
+{#
+  "Prototype only" panel: a link a tester uses to switch between the officer and the
+  consultant. It stands in for an email or a notification that would cross between two
+  people in a real service, so it is styled to look unlike the rest of the page and says so.
+
+  Usage:
+    {% from "evidence/commissioned/partials/handoff.html" import ceHandoff %}
+    {{ ceHandoff({ text: "...", linkText: "...", href: "..." }) }}
+#}
+
+{% macro ceHandoff(params) %}
+<aside class="dlp-ce-handoff" aria-label="Prototype only">
+  <p class="dlp-ce-handoff__label">Prototype only — this would not appear in the real service</p>
+  {% if params.text %}<p class="govuk-body">{{ params.text }}</p>{% endif %}
+  <p class="govuk-body govuk-!-margin-bottom-0">
+    <a class="govuk-link dlp-ce-handoff__link" href="{{ params.href }}">{{ params.linkText }}</a>
+  </p>
+</aside>
+{% endmacro %}

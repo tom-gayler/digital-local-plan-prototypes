@@ -128,10 +128,14 @@ prototype" menu.
    (`serviceName`, already a global in every template), and a nav row linking to each prototype.
    The active nav item is `#1d8feb` (a precise brand blue, not a `govuk-colour()` tint);
    everything else is white — see `app/assets/sass/_service-header.scss`.
-2. `activeSection` (`"project-management"` | `"policy-writing"` | `"evidence"`) is set
+2. `activeSection` (`"project-management"` | `"policy-writing"` | `"evidence"` |
+   `"pins-view"` | `"user-stories"`) is set
    automatically by a `router.use` middleware at the top of `app/routes.js`, based on the
    request path — no per-page wiring needed, since that middleware runs for every request
-   (including plain `app/views/*/index.html` pages with no custom route).
+   (including plain `app/views/*/index.html` pages with no custom route). `"pins-view"` covers
+   only the `/pins-view` hub: the inspector prototypes it lists (`/examination-inspector-view`,
+   `/gateway-2-progress-check`) are seen by someone outside the LPA, so they keep the external
+   header with no internal nav.
 3. Adding a fourth prototype that should appear in the nav: add a nav item to the macro and a
    branch to the `activeSection` middleware in `app/routes.js`.
 
@@ -151,6 +155,13 @@ Styling lives in `app/assets/sass/_service-header.scss` (`.app-service-header*`)
    for the pattern: heading, intro paragraph, "User need" statement, back link to `/`).
 2. Add an entry to `app/views/index.html` linking to it, with a short description and a
    "User need:" line, matching the existing entries' format.
+
+Prototypes that belong to an area (Policy writing, Evidence, PINS view) are listed on that
+area's hub page rather than on `/`. Each hub splits them under two headings: **Current
+prototypes** ("These are the most recent prototypes we've developed. We'll be testing these over
+the next few weeks.") and **Previous versions** ("These are prototypes we've tested through
+Design Feedback sessions and other informal tests."). Entries under them are `h3`s. A new
+prototype normally goes under Current; move it to Previous versions when the team says so.
 
 ## Side navigation component
 
@@ -432,6 +443,103 @@ workspace, independent of the `policy-writing` prototype and sharing no session 
   halves would contradict each other — the check would recommend a source and then report the
   source you just accepted as unreferenced. A title-word overlap of 50% or more lifts a source
   out of "not referenced" into "used but not named".
+## Policy drafting with starting points
+
+`/policy-writing-drafting` (`app/views/policy-writing-drafting/`) is built from Figma frames.
+The exported PNGs live in the local, git-ignored `Figma screenshots/` folder, so they are not in
+the repo. Ask the user for them if you need to compare against the design.
+
+- **Slug.** Same reasoning as v2: it is a sibling of `/policy-writing`, so `router.param('variant')`
+  can't capture it, and the `activeSection` middleware still puts it under "Policy writing".
+- **State** is one object, `policyDrafting`, read only through `getPolicyDrafting`. It is
+  stamped with `POLICY_DRAFTING_SCHEMA_VERSION`, so **bump that when the seed's shape changes**.
+  Static reference content (officers, the evidence library, viewer extracts, suggested policy
+  areas) is in `app/data/policy-drafting.js`.
+- **Chapters come from the included starting points.** `syncChaptersWithStartingPoints` runs on
+  "Save and continue" from the review. It never deletes a chapter that has work on it. A chapter's
+  brief page can merge it into another chapter ("Assign to chapter").
+- **Chapter steps are one config array, `CHAPTER_STEPS`.** Its `done` tests drive the sidebar
+  icons and the chapter's status on the chapters list. The sidebar nests the current chapter's
+  steps under it using the side navigation macro's `children` (one level deep), added for this
+  prototype.
+- **Free-text fields are named `_…`** (`_brief`, `_policyDetail` …), so the kit doesn't copy
+  them into the top level of session data as well. The sources search's `pd*` query fields are
+  deliberately not underscored: they are the sticky filter.
+- **The draft page reuses `.dlp-split` and the v2 `.dlp-pw2-pane` chrome.** The draft is on the
+  left and the evidence viewer on the right. The viewer can be closed, and "Show evidence"
+  brings it back.
+- **The "Relevant NPPF requirements" references are real**, to the August 2026 NPPF, which
+  numbers paragraphs within each policy ("HO1.2" is policy HO1, paragraph 2). The wording is
+  summarised, not quoted, as with the rest of the corpus. The panel says so and links to the
+  PDF. Keep both on any new entry.
+- **Some controls are deliberately inert placeholders from the design**, awaiting
+  functionality: "Save and add another" (explanatory text), "+ Add new source", "View in
+  consultation panel", and the policy detail's formatting toolbar. The field under the toolbar is
+  still a plain textarea. The toolbar buttons are `aria-hidden` and out of the tab order, as in
+  the other prototypes.
+- **Add sources search.** Three small generic components in application.js drive it, each opted
+  into by attribute:
+  - `initSuggestSearch` (`data-dlp-suggest`) is a combobox over `getLibrarySearchTerms()`.
+    Choosing a term submits the search form.
+  - `initAutosubmit` (`data-dlp-autosubmit`) applies a filter as soon as it changes.
+  - `initSelectAll` (`data-dlp-select-all`) adds the header checkbox, the "N selected" count and
+    the disabled state of "Add selected sources".
+
+  Ticked results POST to `/sources/add` in one go. The results and filters are still an ordinary
+  GET page, so all of it works without JavaScript. Selections don't carry across results pages.
+- **The SHMA in the evidence viewer is a real document**: the City of London's City Plan 2040
+  Strategic Housing Market Assessment (September 2023), linked from the viewer. Figures, tables
+  and paragraph numbers are as published, and paragraph wording is shortened. That is different
+  from the invented SHMA text in `evidence-documents.js` that v2 uses, so don't merge the two.
+  Viewer extracts can mix `{ number, text }` paragraphs, `{ heading }` and `{ table }` blocks.
+- **Exporting produces no file.** It adds an entry to the chapter's audit log, shown in the
+  right-hand column of View and export, rendered with the shared `partials/timeline` macro
+  (whose optional per-entry `link` and `caption: false` were added for it). Entries are
+  `{id, what, format, at, by, snapshot}`. The snapshot is
+  a copy of the content taken with `buildDraftContent` at the moment of export, the same
+  builder the live preview uses. So "View this version" (`/chapters/:id/export/:exportId`)
+  shows what was exported, not the current draft. Housing is seeded with two earlier exports.
+  **Changing the entry shape means bumping `POLICY_DRAFTING_SCHEMA_VERSION`.**
+
+## Managing commissioned evidence
+
+`/evidence/commissioned` (`app/views/evidence/commissioned/`) is built from the Figma frames in
+the git-ignored `Figma screenshots/Managing evidence/` folder. An officer (Danny Dyer) briefs an
+external consultant (Elena Waters), the consultant submits a report, and the officer reviews,
+comments, adds notes and accepts it into the library.
+
+- **Slug.** Nested under `/evidence`, so the `activeSection` middleware already puts it under
+  "Evidence". It is listed on `app/views/evidence/index.html`, not the root landing page.
+- **State** is one object, `commissionedEvidence`, read only through `getCommission` and stamped
+  with `COMMISSIONED_EVIDENCE_SCHEMA_VERSION`, so **bump that when the seed's shape changes**.
+  `stage` (`not-started` → `brief-sent` → `submitted`) and `status` (`draft` | `accepted`) drive
+  the sidebar statuses and which pages redirect where. The sidebar deliberately uses only three
+  states — Not started, In progress, Completed — never "Cannot start" (the lock icon), by design
+  request. The landing page's three entry points
+  POST to `/reset` with `_stage` (`start`, `consultant`, `review`), which swap in a fitting state.
+  Static content (themes, previous consultants, `startingCommission()`) is in
+  `app/data/commissioned-evidence.js`. Every action is logged to `history`, shown as Document
+  history.
+- **Screens seen by an external user.** The consultant's pages
+  (`consultant/submit-report`, `consultant/submitted`) extend
+  `evidence/commissioned/partials/external-layout.html`, which overrides the `header` block
+  **without `super()`**: the URL is under `/evidence`, so `super()` would bring the internal
+  service-header nav back. It shows `appExternalHeader` with its optional `organisationName` and
+  `user` params instead. Reuse that shape for any other external-user screen inside an internal
+  prototype.
+- **Testers cross between the two people through "Prototype only" panels**
+  (`partials/handoff.html`, `ceHandoff`): a dashed purple box saying it would not appear in the
+  real service, with a "Switch to …" link. They sit where something would pass between two people
+  in the real service (the brief being emailed, the report arriving), never as general
+  navigation.
+- **Comments anchor to paragraphs.** The consultant's text is split into paragraphs on blank
+  lines; a comment's `anchor` is a paragraph id. `numberCommission` numbers anchored comments in
+  reading order, so the `[n]` beside a paragraph and on its comment match. A paragraph is
+  highlighted only while one of its comments is open.
+- **Inert placeholders from the design:** both rich-text toolbars, "Edit metadata" and
+  "Download PDF". File uploads keep only the file name (the form isn't multipart and nothing is
+  stored).
+
 ## Keeping this file current
 
 As conventions evolve (new shared layouts, session data patterns, testing setup, etc.), update

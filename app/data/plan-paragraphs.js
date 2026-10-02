@@ -198,17 +198,22 @@ function getParagraphsForPolicy (policy) {
 // shape as EVIDENCE_EXCERPTS (see evidence-excerpts.js) so both can be handled the same way
 // when building a paragraph's related resources. Authored only for the 12 full-summary
 // policies, for the same reason as POLICY_PARAGRAPHS above.
+//
+// NPPF entries cite the restructured NPPF, which replaced the old version's continuously
+// numbered paragraphs with named policies (e.g. "Policy DP3"), each numbered from 1 — matching
+// how the London Plan entries alongside them already cite "Policy E1" rather than a paragraph
+// number. See evidence-excerpts.js for the same convention applied to its own NPPF entries.
 const NATIONAL_POLICY_REFERENCES = [
   {
-    text: 'Planning policies should ensure that developments are accessible and inclusive, promote health and well-being, and meet the needs of people with disabilities.',
+    text: 'To create well-designed places, development proposals should include spaces that are safe, secure, inclusive and accessible for all ages and abilities.',
     source: 'NPPF',
-    ref: 'Paragraph 96',
+    ref: 'Policy DP3',
     policyRefs: ['HL1']
   },
   {
-    text: 'Local planning authorities should identify the size, type and tenure of housing needed for different groups in the community and reflect this in planning policies.',
+    text: 'The development plan should set out policies to address the housing needs of different groups in the community, including through affordable housing requirements and specialist types of accommodation.',
     source: 'NPPF',
-    ref: 'Paragraph 62',
+    ref: 'Policy HO5',
     policyRefs: ['HS1']
   },
   {
@@ -218,9 +223,9 @@ const NATIONAL_POLICY_REFERENCES = [
     policyRefs: ['OF1']
   },
   {
-    text: 'Town centres should be referred to as the heart of their communities and Development Plans should support their viability by defining a network and hierarchy of centres.',
+    text: 'Development plans should set out a hierarchy of centres and support the long-term vitality and viability of town centres, including the scope to accommodate additional floorspace and a broader mix of uses.',
     source: 'NPPF',
-    ref: 'Paragraph 89',
+    ref: 'Policy TC1',
     policyRefs: ['RE1']
   },
   {
@@ -230,9 +235,9 @@ const NATIONAL_POLICY_REFERENCES = [
     policyRefs: ['CV1']
   },
   {
-    text: 'Planning policies should make sufficient provision for infrastructure for water supply, wastewater and energy, including for the delivery of renewable and low carbon energy.',
+    text: 'The development plan should make provision for development required for new or enhanced renewable and low carbon energy, electricity network infrastructure, water supply, drainage and wastewater infrastructure.',
     source: 'NPPF',
-    ref: 'Paragraph 96',
+    ref: 'Policy W1',
     policyRefs: ['IN1', 'IN2']
   },
   {
@@ -254,21 +259,21 @@ const NATIONAL_POLICY_REFERENCES = [
     policyRefs: ['DE1']
   },
   {
-    text: 'Priority should be given to pedestrian and cycle movements, and to public transport, when developing transport solutions.',
+    text: 'Transport considerations should be integral to the design of development, giving priority first to walking, wheeling and cycle movements, and second to facilitating easy access to high quality public transport.',
     source: 'NPPF',
-    ref: 'Paragraph 116',
+    ref: 'Policy TR4',
     policyRefs: ['VT1']
   },
   {
-    text: 'Heritage assets should be conserved in a manner appropriate to their significance, and great weight should be given to their conservation when considering the impact of a proposal.',
+    text: 'When considering the potential effect of a development proposal on the significance of a designated heritage asset, substantial weight should be given to the asset’s conservation, irrespective of whether the effect amounts to harm or a positive effect.',
     source: 'NPPF',
-    ref: 'Paragraph 205',
+    ref: 'Policy HE6',
     policyRefs: ['HE1']
   },
   {
-    text: 'Access to good quality open spaces and opportunities for sport and physical activity are important for the health and well-being of communities.',
+    text: 'Development plans should identify wider opportunities to promote good health and support social interaction, and should attach considerable importance to community facilities and recreational land.',
     source: 'NPPF',
-    ref: 'Paragraph 104',
+    ref: 'Policy HC1',
     policyRefs: ['OS1']
   },
   {

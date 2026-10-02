@@ -1,0 +1,138 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/select/macro.njk" import govukSelect %}
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+{% from "partials/timeline/macro.njk" import appTimeline %}
+
+{% set pageName = "View and export policies" %}
+{% set chapterUrl = "/policy-writing-drafting/chapters/" + chapter.id %}
+
+{% block content %}
+<div class="dlp-pd-page-width">
+
+{{ chapterBreadcrumbs(chapter, "View and export") }}
+
+{% if exported %}
+  {{ govukNotificationBanner({
+    type: "success",
+    html: '<p class="govuk-notification-banner__heading">' + (exported.what | escape) + ' exported as ' + exported.format + '</p>' +
+          '<p class="govuk-body">Time and date stamped ' + exported.at + ' and added to the audit log. This prototype does not create a file.</p>'
+  }) }}
+{% endif %}
+
+<h1 class="govuk-heading-xl">View and export policies</h1>
+
+<div class="govuk-grid-row">
+<div class="govuk-grid-column-two-thirds">
+
+<div>
+  <p class="govuk-body">View individual policies, a chapter or the draft plan document in a new window.</p>
+  <p class="govuk-body">
+    If you choose to export or publish part or all of your draft plan, the version will be time
+    and date stamped. Any user can view the version that was published using the audit log.
+  </p>
+</div>
+
+<form method="get" action="/policy-writing-drafting/preview" target="_blank" class="govuk-!-margin-top-8">
+  <input type="hidden" name="_chapter" value="{{ chapter.id }}">
+  <div class="govuk-form-group">
+    <fieldset class="govuk-fieldset" aria-describedby="pd-view-hint">
+      <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">
+        <h2 class="govuk-fieldset__heading">View in new window</h2>
+      </legend>
+      <div class="govuk-hint" id="pd-view-hint">Select what you want to view. This will open in a new browser window.</div>
+
+      <div class="govuk-radios" data-module="govuk-radios">
+        {% if policyAreas | length %}
+          <div class="govuk-radios__item dlp-pd-radio-with-select">
+            <input class="govuk-radios__input" id="pd-view-policy" name="_scope" type="radio" value="policy">
+            <label class="govuk-label govuk-radios__label" for="pd-view-policy">A single policy</label>
+            <label class="govuk-visually-hidden" for="pd-view-policy-select">Policy</label>
+            <select class="govuk-select" id="pd-view-policy-select" name="_policy">
+              {% for area in policyAreas %}
+                <option value="{{ area.id }}">{{ area.ref }}: {{ area.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="govuk-radios__item">
+          <input class="govuk-radios__input" id="pd-view-chapter" name="_scope" type="radio" value="chapter" checked>
+          <label class="govuk-label govuk-radios__label" for="pd-view-chapter">This chapter ({{ chapter.name }})</label>
+        </div>
+        <div class="govuk-radios__item">
+          <input class="govuk-radios__input" id="pd-view-plan" name="_scope" type="radio" value="plan">
+          <label class="govuk-label govuk-radios__label" for="pd-view-plan">The whole draft plan</label>
+        </div>
+      </div>
+    </fieldset>
+  </div>
+  {{ govukButton({ text: "View in new window" }) }}
+</form>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<form method="post" action="{{ chapterUrl }}/export">
+  <h2 class="govuk-heading-m">Export or publish</h2>
+  <p class="govuk-body dlp-pd-muted dlp-pd-measure">
+    Select what you want to export and the format. Exported versions are time and date stamped and available in the audit log.
+  </p>
+
+  {% set exportItems = [] %}
+  {% for option in exportOptions %}
+    {% set exportItems = (exportItems.push({ value: option.value, text: option.text, selected: option.value == "chapter:" + chapter.id }), exportItems) %}
+  {% endfor %}
+  {{ govukSelect({
+    id: "pd-export-what",
+    name: "_what",
+    label: { text: "What to export", classes: "govuk-label--s" },
+    items: exportItems
+  }) }}
+
+  <fieldset class="govuk-fieldset">
+    <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Format</legend>
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Export as PDF", classes: "govuk-button--secondary", name: "_format", value: "pdf" }) }}
+      {{ govukButton({ text: "Export as Word", classes: "govuk-button--secondary", name: "_format", value: "word" }) }}
+    </div>
+  </fieldset>
+</form>
+
+<p class="govuk-body govuk-!-margin-top-6">
+  <a class="govuk-link" href="{{ chapterUrl }}/draft">&larr; Back to draft policy</a>
+</p>
+
+</div>
+
+<div class="govuk-grid-column-one-third">
+  {#
+    Audit log: every export of this chapter, newest first. Each keeps a snapshot of what was
+    exported, so "View this version" shows it as it was then, not as it is now.
+  #}
+  <aside class="dlp-pd-audit" aria-labelledby="pd-audit-heading">
+    <h2 class="govuk-heading-m" id="pd-audit-heading">Audit log</h2>
+    <p class="govuk-body-s dlp-pd-muted">Every exported or published version of this chapter, newest first.</p>
+
+    {% if chapter.exports | length %}
+      {# The shared timeline (partials/timeline). Built from chapter.exports newest first. #}
+      {% set auditEntries = [] %}
+      {% for entry in chapter.exports | reverse %}
+        {% set auditEntries = (auditEntries.push({
+          type: entry.what,
+          description: "Exported as " + entry.format,
+          date: entry.at,
+          actor: entry.by,
+          status: "Exported",
+          link: { href: chapterUrl + "/export/" + entry.id, text: "View this version", newTab: true } if entry.snapshot else undefined
+        }), auditEntries) %}
+      {% endfor %}
+      {{ appTimeline({ entries: auditEntries, caption: false }) }}
+    {% else %}
+      <p class="govuk-body-s">Nothing has been exported from this chapter yet.</p>
+    {% endif %}
+  </aside>
+</div>
+</div>
+
+</div>
+{% endblock %}

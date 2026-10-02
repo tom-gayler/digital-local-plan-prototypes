@@ -1,0 +1,81 @@
+{#
+  One comment, as a card. Used in the Review and comment panel (context "review", with reply
+  and resolve) and in Manage source's list of all comments (context "source", with a link back to
+  the comment in the review and resolve).
+
+  Usage:
+    {% from "evidence/commissioned/partials/comment.html" import ceComment %}
+    {{ ceComment(comment, { context: "review", errors: errors }) }}
+
+  comment: one of commissionedEvidence.comments, plus `number` (its [n] in the document, or
+    null for a general comment) — see numberCommission in app/routes.js.
+#}
+
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% macro ceComment(comment, params) %}
+{% set replyError = params.errors['reply-' + comment.id] if params.errors else null %}
+<article class="dlp-ce-comment {%- if comment.resolved %} dlp-ce-comment--resolved{% endif %}" id="comment-{{ comment.id }}" tabindex="-1">
+  <header class="dlp-ce-comment__header">
+    <p class="dlp-ce-comment__meta">
+      <strong class="dlp-ce-comment__author">{{ comment.author }}</strong>
+      <span class="dlp-ce-comment__date">{{ comment.at }}</span>
+    </p>
+    {% if comment.resolved %}
+      {{ govukTag({ text: "Resolved", classes: "govuk-tag--green" }) }}
+    {% elif params.context == "source" %}
+      {{ govukTag({ text: "Open", classes: "govuk-tag--blue" }) }}
+    {% endif %}
+  </header>
+
+  <p class="dlp-ce-comment__section">
+    {% if comment.number %}<span class="dlp-ce-marker" aria-hidden="true">[{{ comment.number }}]</span>{% endif %}
+    {{ comment.section }}
+  </p>
+
+  <p class="govuk-body dlp-ce-comment__text">{{ comment.text }}</p>
+
+  {% for reply in comment.replies %}
+    <div class="dlp-ce-reply">
+      <p class="dlp-ce-comment__meta">
+        <strong class="dlp-ce-comment__author">{{ reply.author }}</strong>
+        <span class="dlp-ce-comment__date">{{ reply.at }}</span>
+      </p>
+      <p class="govuk-body-s govuk-!-margin-bottom-0">{{ reply.text }}</p>
+    </div>
+  {% endfor %}
+
+  <div class="dlp-ce-comment__actions">
+    {% if params.context == "source" %}
+      <a class="govuk-link" href="/evidence/commissioned/review#comment-{{ comment.id }}">View comment<span class="govuk-visually-hidden"> from {{ comment.author }}</span></a>
+    {% endif %}
+    {% if not comment.resolved %}
+      <form method="post" action="/evidence/commissioned/comments/{{ comment.id }}/resolve" class="dlp-ce-inline-form" novalidate>
+        <input type="hidden" name="_returnTo" value="{{ params.context }}">
+        <button type="submit" class="dlp-ce-link-button">Resolve comment<span class="govuk-visually-hidden"> from {{ comment.author }}</span></button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if params.context == "review" and not comment.resolved %}
+    <details class="govuk-details dlp-ce-reply-form" {%- if replyError %} open{% endif %}>
+      <summary class="govuk-details__summary">
+        <span class="govuk-details__summary-text">Reply<span class="govuk-visually-hidden"> to {{ comment.author }}</span></span>
+      </summary>
+      <div class="govuk-details__text">
+        <form method="post" action="/evidence/commissioned/review/comments/{{ comment.id }}/reply" novalidate>
+          <div class="govuk-form-group {%- if replyError %} govuk-form-group--error{% endif %}">
+            <label class="govuk-label govuk-label--s" for="reply-{{ comment.id }}">Your reply</label>
+            {% if replyError %}
+              <p id="reply-{{ comment.id }}-error" class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ replyError }}</p>
+            {% endif %}
+            <textarea class="govuk-textarea {%- if replyError %} govuk-textarea--error{% endif %}" id="reply-{{ comment.id }}" name="_reply" rows="3"
+              {%- if replyError %} aria-describedby="reply-{{ comment.id }}-error"{% endif %}></textarea>
+          </div>
+          <button type="submit" class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" data-module="govuk-button">Post reply</button>
+        </form>
+      </div>
+    </details>
+  {% endif %}
+</article>
+{% endmacro %}

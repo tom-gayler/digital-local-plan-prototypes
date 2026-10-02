@@ -302,9 +302,9 @@ module.exports = {
         ,
           {
             id: 'pw2-src-s1-p1',
-            text: "Plans should provide for objectively assessed needs for housing and other development, with a presumption in favour of sustainable development applying unless the policies most important for determining the application provide a clear reason for refusal.",
+            text: "Decisions on development proposals should apply a presumption in favour of sustainable development, with proposals that accord with an up-to-date development plan and the Framework’s decision-making policies approved without delay.",
             source: 'National Planning Policy Framework',
-            ref: 'Paragraph 11',
+            ref: 'Policy S3',
             policyRefs: ['S1', 'S3', 'HS1']
           },
           {
@@ -366,9 +366,9 @@ module.exports = {
         ,
           {
             id: 'pw2-src-s3-p1',
-            text: "The minimum number of homes needed should be determined using the standard method, unless exceptional circumstances justify an alternative approach that also reflects current and future demographic trends and market signals.",
+            text: "Spatial development strategies, and local plans where a spatial development strategy is not in place, should be based on a housing need assessment establishing the overall number of homes needed in the area as a minimum over the plan period, using the standard method.",
             source: 'National Planning Policy Framework',
-            ref: 'Paragraph 61',
+            ref: 'Policy HO1',
             policyRefs: ['S3', 'HS1']
           },
           {
@@ -478,6 +478,200 @@ module.exports = {
         ]
       }
     ]
+  },
+
+  // "Policy drafting with starting points" (/policy-writing-drafting). Read only through
+  // getPolicyDrafting in app/routes.js, which deep-clones this on first touch. Changing its
+  // shape means bumping POLICY_DRAFTING_SCHEMA_VERSION there.
+  //
+  // startingPoints follow the Figma "Review starting points" screen, with "Health, inclusion and
+  // safety" added as an included starting point so the chapter of that name has one behind it.
+  // Chapters are created from the included starting points; Housing is part-way through, so
+  // the chapter steps have something to show.
+  policyDrafting: {
+    reviewed: false,
+    chaptersConfirmed: false,
+    startingPoints: [
+      { id: 'health-inclusion-safety', name: 'Health, inclusion and safety', source: 'Adopted plan', included: true },
+      { id: 'housing', name: 'Housing', source: 'Adopted plan', included: true },
+      { id: 'infrastructure', name: 'Infrastructure', source: 'Adopted plan', included: true },
+      { id: 'design', name: 'Design', source: 'Adopted plan', included: true },
+      { id: 'offices', name: 'Offices', source: 'Adopted plan', included: true },
+      { id: 'retail', name: 'Retail', source: 'Adopted plan', included: false },
+      { id: 'culture-visitors', name: 'Culture and visitors', source: 'Adopted plan', included: true },
+      { id: 'heritage-tall-buildings', name: 'Heritage and Tall buildings', source: 'Adopted plan', included: true },
+      { id: 'open-spaces', name: 'Open Spaces and Green Infrastructure', source: 'Adopted plan', included: false },
+      { id: 'climate-resilience', name: 'Climate Resilience', source: 'New need', included: false },
+      { id: 'transport', name: 'Transport', source: 'Adopted plan', included: true },
+      { id: 'grey-belt-release', name: 'Grey belt release', source: 'NPPF/SDS', included: false },
+      { id: 'new-thames-crossings', name: 'New Thames Crossings', source: 'NPPF/SDS', included: false }
+    ],
+    chapters: [
+      { id: 'health-inclusion-safety', name: 'Health, inclusion and safety', startingPointIds: ['health-inclusion-safety'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      {
+        id: 'housing',
+        name: 'Housing',
+        startingPointIds: ['housing'],
+        brief: 'Plan for the homes the City needs over the plan period, including affordable housing, while protecting its role as a centre of business.',
+        officers: ['sarah-jenkins', 'james-chen'],
+        explanatoryText: '',
+        sources: ['shma', 'nppf-housing'],
+        policyAreas: null,
+        drafts: {},
+        // Earlier exports by colleagues, so the audit log has history to show. Each keeps a
+        // snapshot of what was exported, in the shape buildDraftContent returns.
+        exports: [
+          {
+            id: 'export-seed-1',
+            what: 'Housing (full chapter)',
+            format: 'PDF',
+            at: '12/09/2026, 16:05',
+            by: 'Sarah Jenkins',
+            snapshot: {
+              scope: 'chapter',
+              chapters: [{
+                chapter: {
+                  name: 'Housing',
+                  explanatoryText: 'The City has a small but growing residential population, concentrated in a handful of established residential areas. The Strategic Housing Market Assessment identifies a need for new homes that are overwhelmingly affordable, alongside the London Plan target of 146 homes a year.'
+                },
+                policyAreas: [
+                  {
+                    ref: 'HS1',
+                    name: 'Location of New Housing',
+                    strategic: false,
+                    draft: {
+                      title: 'Location of new housing',
+                      context: 'This policy directs new housing to places where residents can enjoy a good standard of amenity without constraining the City\'s business function.',
+                      detail: 'New housing will be supported in or near identified residential areas, where it would not prejudice the primary business function of the City or cause unacceptable harm to residential amenity.',
+                      strategic: false,
+                      savedAt: '12/09/2026, 15:48'
+                    }
+                  },
+                  { ref: 'HS2', name: 'Loss of housing', strategic: false, draft: null }
+                ]
+              }]
+            }
+          },
+          {
+            id: 'export-seed-2',
+            what: 'HS1: Location of New Housing',
+            format: 'Word',
+            at: '23/09/2026, 12:52',
+            by: 'James Chen',
+            snapshot: {
+              scope: 'policy',
+              chapters: [{
+                chapter: { name: 'Housing', explanatoryText: '' },
+                policyAreas: [{
+                  ref: 'HS1',
+                  name: 'Location of New Housing',
+                  strategic: false,
+                  draft: {
+                    title: 'Location of new housing',
+                    context: 'This policy directs new housing to places where residents can enjoy a good standard of amenity without constraining the City\'s business function.',
+                    detail: 'New housing will be supported in or near identified residential areas, where it would not prejudice the primary business function of the City or cause unacceptable harm to residential amenity. At least 35% of homes on sites of ten or more units should be affordable, in line with the London Plan threshold approach.',
+                    strategic: false,
+                    savedAt: '23/09/2026, 12:40'
+                  }
+                }]
+              }]
+            }
+          }
+        ]
+      },
+      { id: 'infrastructure', name: 'Infrastructure', startingPointIds: ['infrastructure'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'design', name: 'Design', startingPointIds: ['design'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'offices', name: 'Offices', startingPointIds: ['offices'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'culture-visitors', name: 'Culture and visitors', startingPointIds: ['culture-visitors'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'heritage-tall-buildings', name: 'Heritage and Tall buildings', startingPointIds: ['heritage-tall-buildings'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] },
+      { id: 'transport', name: 'Transport', startingPointIds: ['transport'], brief: '', officers: [], explanatoryText: '', sources: [], policyAreas: null, drafts: {}, exports: [] }
+    ]
+  },
+
+  // Managing commissioned evidence (/evidence/commissioned). One commission, part-way through:
+  // the consultant has submitted a draft and the officer is reviewing it. Read only through
+  // getCommission in app/routes.js, and stamped with COMMISSIONED_EVIDENCE_SCHEMA_VERSION, so
+  // bump that when this shape changes. "Start from the beginning" swaps in startingCommission()
+  // from app/data/commissioned-evidence.js instead. History is oldest first; pages reverse it.
+  commissionedEvidence: {
+    stage: 'submitted',
+    status: 'draft',
+    brief: {
+      title: 'Housing delivery assessment',
+      text: 'Assess whether the City can deliver the housing target proposed in the draft plan over the plan period. Review delivery since 2020, test the proposed annual target against the capacity of local infrastructure, and recommend a target and phasing that can be supported. Identify any sites where further environmental assessment is needed before they can be relied on.',
+      link: 'https://example.com/brief.pdf',
+      file: '',
+      themes: ['Health, inclusion and safety', 'Housing', 'Infrastructure', 'Climate Resilience', 'Strategic policy'],
+      consultant: { name: 'Elena Waters', organisation: 'Waters Consultancy', email: 'elena@waters.co.uk' },
+      assignedOfficer: 'Sarah Mitchell',
+      sentBy: 'danny.dyer@council.gov.uk',
+      commencedOn: '15 September 2025'
+    },
+    report: {
+      title: 'Housing delivery assessment',
+      content: '',
+      paragraphs: [
+        { id: 'p1', text: 'The current housing delivery targets for the upcoming fiscal year are ambitious. Our preliminary analysis suggests that the local infrastructure may struggle to support the rapid expansion proposed in the draft plan.' },
+        { id: 'p2', text: 'The target of 500 new units should be revised to 350 units to align with current infrastructure capacity.' },
+        { id: 'p3', text: 'Further consultation with local residents and environmental groups is recommended to ensure the plan is sustainable in the long term. Transport links to the proposed development sites require significant investment before construction begins.' },
+        { id: 'p4', text: 'The environmental impact assessment has not yet been completed for sites north of the river.' },
+        { id: 'p5', text: 'We recommend phasing the development over a 5-year period rather than the proposed 3-year timeline to manage demand on local services.' }
+      ],
+      links: ['https://example.com/infrastructure-capacity-study'],
+      files: ['housing-delivery-tables.xlsx'],
+      file: { name: 'housing-delivery-assessment.pdf', meta: 'PDF · 42 pages · 3.8 MB' },
+      submittedAt: '22 Sep 2025, 16:30'
+    },
+    summary: 'This assessment reviews housing delivery across the City of London from 2020 to 2025. It recommends a phased target of 350 new homes a year, supported by planned transport and utilities investment, and identifies further environmental assessment for sites north of the river.',
+    comments: [
+      {
+        id: 'c1',
+        author: 'Danny Dyer',
+        at: '23 Sep 2025, 10:15',
+        anchor: 'p2',
+        section: 'Section 2 — Housing target',
+        text: 'This target reduction needs supporting evidence from the infrastructure report. Can you reference section 3.2?',
+        replies: [
+          { author: 'Elena Waters', at: '23 Sep 2025, 14:20', text: 'Updated with the infrastructure report reference and revised the paragraph.' }
+        ],
+        resolved: false
+      },
+      {
+        id: 'c2',
+        author: 'Sarah Mitchell',
+        at: '24 Sep 2025, 09:30',
+        anchor: 'p4',
+        section: 'Section 3 — Environmental assessment',
+        text: 'The EIA timeline should be included. I have the draft dates from the environmental team.',
+        replies: [],
+        resolved: false
+      },
+      {
+        id: 'c3',
+        author: 'David Chen',
+        at: '24 Sep 2025, 11:00',
+        anchor: null,
+        section: 'General comment',
+        text: 'Overall good progress. Please address the two highlighted sections before we move to final review.',
+        replies: [],
+        resolved: false
+      }
+    ],
+    notes: [
+      { id: 'n1', text: 'I\'ve added the initial evidence source and included the supporting data supplied by the policy team.', date: '18 Sep 2025', time: '11:47', by: 'Danny Dyer', sentToConsultant: true },
+      { id: 'n2', text: 'This evidence aligns with the current policy direction, but we should verify the figures before sharing.', date: '23 Sep 2025', time: '09:15', by: 'James Brown', sentToConsultant: false },
+      { id: 'n3', text: 'Please clarify the source date and confirm whether the data has been updated since the last review.', date: '24 Sep 2025', time: '14:32', by: 'Sarah Mitchell', sentToConsultant: true }
+    ],
+    history: [
+      { at: '15 Sep 2025, 09:00', actor: 'Danny Dyer', action: 'Created brief and assigned it to Elena Waters', link: { text: 'View brief', href: '/evidence/commissioned/brief' } },
+      { at: '22 Sep 2025, 16:30', actor: 'Elena Waters', action: 'Submitted draft report', link: { text: 'View version', href: '/evidence/commissioned/review' } },
+      { at: '23 Sep 2025, 10:15', actor: 'Danny Dyer', action: 'Added comment on Section 2 — housing target', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c1' } },
+      { at: '23 Sep 2025, 14:20', actor: 'Elena Waters', action: 'Replied to comment on Section 2', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c1' } },
+      { at: '24 Sep 2025, 09:30', actor: 'Sarah Mitchell', action: 'Added comment on Section 3 — EIA timeline', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c2' } },
+      { at: '24 Sep 2025, 11:00', actor: 'David Chen', action: 'Added comment — overall progress note', link: { text: 'View comment', href: '/evidence/commissioned/review#comment-c3' } }
+    ],
+    tags: [],
+    acceptedOn: null
   }
 
 }

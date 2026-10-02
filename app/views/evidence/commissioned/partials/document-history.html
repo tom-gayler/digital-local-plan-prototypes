@@ -1,0 +1,28 @@
+{# Document history table, shared by Review and comment and Manage source. Newest first. #}
+
+{% macro ceDocumentHistory(entries) %}
+<table class="govuk-table dlp-ce-history">
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header">Date</th>
+      <th scope="col" class="govuk-table__header">Person</th>
+      <th scope="col" class="govuk-table__header">Action</th>
+      <th scope="col" class="govuk-table__header govuk-table__header--numeric"><span class="govuk-visually-hidden">Link</span></th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for entry in entries %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell dlp-ce-history__date">{{ entry.at }}</td>
+        <td class="govuk-table__cell"><strong>{{ entry.actor }}</strong></td>
+        <td class="govuk-table__cell">{{ entry.action }}</td>
+        <td class="govuk-table__cell govuk-table__cell--numeric">
+          {% if entry.link %}
+            <a class="govuk-link" href="{{ entry.link.href }}">{{ entry.link.text }}<span class="govuk-visually-hidden">: {{ entry.action }}, {{ entry.at }}</span></a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}

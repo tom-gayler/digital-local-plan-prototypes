@@ -27,6 +27,10 @@ router.use((req, res, next) => {
     res.locals.activeSection = 'user-stories'
   } else if (req.path.startsWith('/statement-of-compliance')) {
     res.locals.activeSection = 'statement-of-compliance'
+  } else if (req.path.startsWith('/pins-view')) {
+    // Only the PINS hub page. The prototypes it links to are seen by inspectors, so they keep
+    // their own external header with no internal nav (see partials/external-header).
+    res.locals.activeSection = 'pins-view'
   }
   next()
 })
@@ -628,6 +632,490 @@ router.post('/evidence/results', (req, res) => {
   }
 
   res.redirect('/evidence/results?exported=1')
+})
+
+// --- Managing commissioned evidence ---
+//
+// An officer briefs an external consultant, the consultant submits a report, and the officer
+// reviews, comments, adds notes and accepts it into the evidence library:
+//   /evidence/commissioned                       - landing page, with a reset per entry point
+//   /evidence/commissioned/create-brief          - write and send the brief
+//   /evidence/commissioned/brief(-sent)          - the sent brief, and its confirmation
+//   /evidence/commissioned/consultant/...        - the consultant's screens (an external user)
+//   /evidence/commissioned/review                - the report, with comments beside it
+//   /evidence/commissioned/notes                 - notes, sent to the consultant or internal
+//   /evidence/commissioned/accept                - tag and accept the report
+//   /evidence/commissioned/source                - the accepted source in the library
+//
+// The consultant's screens wouldn't be reachable from the officer's journey in a real service.
+// Testers get to them through "Prototype only" handoff panels (commissioned/partials/handoff.html)
+// and from the landing page, and they use their own header without the internal nav.
+//
+// Everything is one object, req.session.data.commissionedEvidence, read only through
+// getCommission. Free-text fields are named `_…` so the kit doesn't copy them into session data.
+
+const CE = '/evidence/commissioned'
+const COMMISSIONED_EVIDENCE_SCHEMA_VERSION = 1
+
+const {
+  THEMES: CE_THEMES,
+  OFFICER: CE_OFFICER,
+  PREVIOUS_CONSULTANTS,
+  getPreviousConsultant,
+  startingCommission,
+  emptyReport
+} = require('./data/commissioned-evidence.js')
+
+function getCommission (req) {
+  if (req.session.data.commissionedEvidenceSchemaVersion !== COMMISSIONED_EVIDENCE_SCHEMA_VERSION) {
+    req.session.data.commissionedEvidence = JSON.parse(JSON.stringify(sessionDataDefaults.commissionedEvidence))
+    req.session.data.commissionedEvidenceOwned = true
+    req.session.data.commissionedEvidenceSchemaVersion = COMMISSIONED_EVIDENCE_SCHEMA_VERSION
+  }
+  if (!req.session.data.commissionedEvidenceOwned) {
+    req.session.data.commissionedEvidence = JSON.parse(JSON.stringify(req.session.data.commissionedEvidence))
+    req.session.data.commissionedEvidenceOwned = true
+  }
+  return req.session.data.commissionedEvidence
+}
+
+// The seed with the report taken out: the brief has gone to the consultant and nothing has come
+// back yet. This is where "See the consultant's view" starts.
+function briefSentCommission () {
+  const commission = JSON.parse(JSON.stringify(sessionDataDefaults.commissionedEvidence))
+  commission.stage = 'brief-sent'
+  commission.report = emptyReport()
+  commission.summary = null
+  commission.comments = []
+  commission.notes = []
+  commission.history = commission.history.slice(0, 1)
+  return commission
+}
+
+const CE_STARTS = {
+  start: { build: startingCommission, redirect: CE + '/create-brief' },
+  consultant: { build: briefSentCommission, redirect: CE + '/consultant/submit-report' },
+  review: { build: () => JSON.parse(JSON.stringify(sessionDataDefaults.commissionedEvidence)), redirect: CE + '/review' }
+}
+
+function ceTimeZoneFormat (options) {
+  return new Date().toLocaleString('en-GB', Object.assign({ timeZone: 'Europe/London' }, options))
+}
+
+function ceNow () {
+  return ceTimeZoneFormat({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function ceToday () {
+  return ceTimeZoneFormat({ day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+function ceLog (commission, actor, action, link) {
+  commission.history.push({ at: ceNow(), actor, action, link: link || null })
+}
+
+function ceText (value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function ceThemes (value) {
+  return [].concat(value || []).filter(theme => CE_THEMES.includes(theme))
+}
+
+function ceNextId (prefix, items) {
+  return prefix + Date.now().toString(36) + items.length
+}
+
+// Errors survive the redirect in session data, and are cleared as soon as they're shown.
+function ceSetErrors (req, errors) {
+  req.session.data.commissionedEvidenceErrors = errors
+}
+
+function ceTakeErrors (req) {
+  const errors = req.session.data.commissionedEvidenceErrors || {}
+  delete req.session.data.commissionedEvidenceErrors
+  return errors
+}
+
+function ceErrorList (errors) {
+  return Object.keys(errors).map(id => ({ text: errors[id], href: '#' + id }))
+}
+
+function ceCommentLabel (comment) {
+  return comment.section || 'General comment'
+}
+
+// Sidebar statuses follow from where the commission has got to. Only three states here, by
+// design: Not started, In progress (the page you're on) and Completed. A step that can't be
+// done yet reads as Not started rather than showing a lock; its page redirects back anyway.
+function buildCommissionSidebar (commission, active) {
+  const briefSent = commission.stage !== 'not-started'
+  const accepted = commission.status === 'accepted'
+  const steps = [
+    { key: 'brief', text: 'Create brief', href: briefSent ? CE + '/brief' : CE + '/create-brief', done: briefSent },
+    { key: 'review', text: 'Review and comment', href: CE + '/review', done: accepted },
+    { key: 'accept', text: 'Accept and save', href: CE + '/accept', done: accepted },
+    { key: 'source', text: 'Manage source', href: CE + '/source', done: false }
+  ]
+  return [{
+    items: steps.map(step => {
+      const isActive = step.key === active
+      let status = 'Not started'
+      if (step.done) status = 'Completed'
+      else if (isActive) status = 'In progress'
+      return { text: step.text, href: step.href, active: isActive, status }
+    })
+  }]
+}
+
+// Numbers each comment that is anchored to a paragraph, in reading order, so the [n] beside a
+// paragraph and the [n] on its comment match.
+function numberCommission (commission) {
+  const paragraphs = commission.report.paragraphs.map((paragraph, index) => ({
+    id: paragraph.id,
+    text: paragraph.text,
+    position: index + 1,
+    comments: []
+  }))
+  const numbers = {}
+  let next = 1
+  paragraphs.forEach(paragraph => {
+    commission.comments.filter(comment => comment.anchor === paragraph.id).forEach(comment => {
+      numbers[comment.id] = next++
+      paragraph.comments.push({ id: comment.id, number: numbers[comment.id], resolved: comment.resolved })
+    })
+    paragraph.highlighted = paragraph.comments.some(comment => !comment.resolved)
+  })
+  const comments = commission.comments.map(comment => Object.assign({}, comment, { number: numbers[comment.id] || null }))
+  return { paragraphs, comments }
+}
+
+function renderCommissionPage (req, res, view, active, locals) {
+  const commission = getCommission(req)
+  const errors = ceTakeErrors(req)
+  res.render('evidence/commissioned/' + view, Object.assign({
+    commission,
+    themes: CE_THEMES,
+    officer: CE_OFFICER,
+    viewer: CE_OFFICER.name,
+    errors,
+    errorList: ceErrorList(errors),
+    sidebarSections: buildCommissionSidebar(commission, active)
+  }, locals))
+}
+
+router.get(CE, (req, res) => {
+  res.render('evidence/commissioned/index')
+})
+
+router.post(CE + '/reset', (req, res) => {
+  const start = CE_STARTS[req.body._stage] || CE_STARTS.start
+  getCommission(req)
+  req.session.data.commissionedEvidence = start.build()
+  req.session.data.commissionedEvidenceOwned = true
+  delete req.session.data.commissionedEvidenceErrors
+  res.redirect(start.redirect)
+})
+
+// --- Create brief ---
+
+router.get(CE + '/create-brief', (req, res) => {
+  if (getCommission(req).stage !== 'not-started') return res.redirect(CE + '/brief')
+  renderCommissionPage(req, res, 'create-brief', 'brief', { consultants: PREVIOUS_CONSULTANTS })
+})
+
+router.post(CE + '/create-brief', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage !== 'not-started') return res.redirect(CE + '/brief')
+  const brief = commission.brief
+  const body = req.body
+
+  // Keep what was typed, so a validation error doesn't lose it.
+  brief.title = ceText(body._title)
+  brief.text = ceText(body._brief)
+  brief.link = ceText(body._link)
+  if (ceText(body._file)) brief.file = ceText(body._file)
+  brief.themes = ceThemes(body._themes)
+  brief.consultantMode = body._consultantMode === 'new' ? 'new' : 'previous'
+  brief.consultantId = ceText(body._consultantId)
+  brief.newConsultant = {
+    name: ceText(body._consultantName),
+    organisation: ceText(body._consultantOrganisation),
+    email: ceText(body._consultantEmail)
+  }
+
+  const errors = {}
+  if (!brief.title) errors.title = 'Enter a title for the brief'
+  if (!brief.text) errors.brief = 'Describe what the consultant needs to investigate or report on'
+  let consultant = null
+  if (brief.consultantMode === 'previous') {
+    consultant = getPreviousConsultant(brief.consultantId)
+    if (!consultant) errors.consultantId = 'Select a consultant'
+  } else {
+    if (!brief.newConsultant.name) errors.consultantName = 'Enter the consultant\'s full name'
+    if (!brief.newConsultant.email) errors.consultantEmail = 'Enter the consultant\'s email address'
+    consultant = brief.newConsultant
+  }
+  if (Object.keys(errors).length) {
+    ceSetErrors(req, errors)
+    return res.redirect(CE + '/create-brief')
+  }
+
+  brief.consultant = {
+    name: consultant.name,
+    organisation: consultant.organisation,
+    email: consultant.email
+  }
+  brief.commencedOn = ceToday()
+  commission.stage = 'brief-sent'
+  commission.status = 'draft'
+  commission.report = emptyReport()
+  commission.summary = null
+  commission.comments = []
+  commission.notes = []
+  commission.history = []
+  commission.tags = []
+  commission.acceptedOn = null
+  ceLog(commission, CE_OFFICER.name, 'Created brief and assigned it to ' + brief.consultant.name,
+    { text: 'View brief', href: CE + '/brief' })
+  res.redirect(CE + '/brief-sent')
+})
+
+router.get(CE + '/brief-sent', (req, res) => {
+  if (getCommission(req).stage === 'not-started') return res.redirect(CE + '/create-brief')
+  renderCommissionPage(req, res, 'brief-sent', 'brief')
+})
+
+router.get(CE + '/brief', (req, res) => {
+  if (getCommission(req).stage === 'not-started') return res.redirect(CE + '/create-brief')
+  renderCommissionPage(req, res, 'brief', 'brief')
+})
+
+// --- The consultant's screens (external user) ---
+
+function renderConsultantPage (req, res, view, locals) {
+  const commission = getCommission(req)
+  const errors = ceTakeErrors(req)
+  const report = commission.report
+  res.render('evidence/commissioned/consultant/' + view, Object.assign({
+    commission,
+    viewer: commission.brief.consultant ? commission.brief.consultant.name : 'the consultant',
+    errors,
+    errorList: ceErrorList(errors),
+    // The seed holds the report as paragraphs only, so rebuild the text box's contents from them.
+    reportContent: report.content || report.paragraphs.map(paragraph => paragraph.text).join('\n\n'),
+    notesFromCouncil: commission.notes.filter(note => note.sentToConsultant).slice().reverse()
+  }, locals))
+}
+
+router.get(CE + '/consultant/submit-report', (req, res) => {
+  renderConsultantPage(req, res, 'submit-report')
+})
+
+router.post(CE + '/consultant/submit-report', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage === 'not-started' || commission.status === 'accepted') {
+    return res.redirect(CE + '/consultant/submit-report')
+  }
+  const report = commission.report
+  report.title = ceText(req.body._reportTitle)
+  report.content = typeof req.body._reportContent === 'string' ? req.body._reportContent.trim() : ''
+  const file = ceText(req.body._file)
+  if (file && !report.files.includes(file)) report.files.push(file)
+
+  if (req.body._action === 'add-link') {
+    const link = ceText(req.body._linkUrl)
+    if (!link) {
+      ceSetErrors(req, { linkUrl: 'Enter a URL to add' })
+    } else if (!report.links.includes(link)) {
+      report.links.push(link)
+    }
+    return res.redirect(CE + '/consultant/submit-report#add-links')
+  }
+
+  const errors = {}
+  if (!report.title) errors.reportTitle = 'Enter a title for your report'
+  if (!report.content) errors.reportContent = 'Enter your report content'
+  if (Object.keys(errors).length) {
+    ceSetErrors(req, errors)
+    return res.redirect(CE + '/consultant/submit-report')
+  }
+
+  // A blank line starts a new paragraph. Comments keep their paragraph by position, and any
+  // whose paragraph has gone become general comments.
+  report.paragraphs = report.content.split(/\n\s*\n/)
+    .map(text => text.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .map((text, index) => ({ id: 'p' + (index + 1), text }))
+  const ids = report.paragraphs.map(paragraph => paragraph.id)
+  commission.comments.forEach(comment => {
+    if (comment.anchor && !ids.includes(comment.anchor)) comment.anchor = null
+  })
+  const revised = Boolean(report.submittedAt)
+  report.submittedAt = ceNow()
+  commission.stage = 'submitted'
+  ceLog(commission, commission.brief.consultant.name, revised ? 'Submitted revised draft report' : 'Submitted draft report',
+    { text: 'View version', href: CE + '/review' })
+  res.redirect(CE + '/consultant/submitted')
+})
+
+router.get(CE + '/consultant/submitted', (req, res) => {
+  if (getCommission(req).stage !== 'submitted') return res.redirect(CE + '/consultant/submit-report')
+  renderConsultantPage(req, res, 'submitted')
+})
+
+// --- Review and comment ---
+
+router.get(CE + '/review', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage === 'not-started') return res.redirect(CE + '/create-brief')
+  const numbered = numberCommission(commission)
+  renderCommissionPage(req, res, 'review', 'review', {
+    paragraphs: numbered.paragraphs,
+    comments: numbered.comments,
+    openCount: commission.comments.filter(comment => !comment.resolved).length,
+    history: commission.history.slice().reverse()
+  })
+})
+
+router.post(CE + '/review/comments', (req, res) => {
+  const commission = getCommission(req)
+  const text = ceText(req.body._comment)
+  if (!text) {
+    ceSetErrors(req, { comment: 'Enter a comment' })
+    return res.redirect(CE + '/review#add-comment')
+  }
+  const index = commission.report.paragraphs.findIndex(paragraph => paragraph.id === req.body._anchor)
+  const comment = {
+    id: ceNextId('c', commission.comments),
+    author: CE_OFFICER.name,
+    at: ceNow(),
+    anchor: index >= 0 ? commission.report.paragraphs[index].id : null,
+    section: index >= 0 ? 'Paragraph ' + (index + 1) : 'General comment',
+    text,
+    replies: [],
+    resolved: false
+  }
+  commission.comments.push(comment)
+  ceLog(commission, CE_OFFICER.name,
+    index >= 0 ? 'Added comment on Paragraph ' + (index + 1) : 'Added general comment',
+    { text: 'View comment', href: CE + '/review#comment-' + comment.id })
+  res.redirect(CE + '/review#comment-' + comment.id)
+})
+
+router.post(CE + '/review/comments/:commentId/reply', (req, res) => {
+  const commission = getCommission(req)
+  const comment = commission.comments.find(candidate => candidate.id === req.params.commentId)
+  if (!comment) return res.redirect(CE + '/review')
+  const text = ceText(req.body._reply)
+  if (!text) {
+    ceSetErrors(req, { ['reply-' + comment.id]: 'Enter a reply' })
+    return res.redirect(CE + '/review#comment-' + comment.id)
+  }
+  comment.replies.push({ author: CE_OFFICER.name, at: ceNow(), text })
+  ceLog(commission, CE_OFFICER.name, 'Replied to comment on ' + ceCommentLabel(comment),
+    { text: 'View comment', href: CE + '/review#comment-' + comment.id })
+  res.redirect(CE + '/review#comment-' + comment.id)
+})
+
+// Resolving is offered on both Review and Manage source, so it goes back to wherever it came from.
+router.post(CE + '/comments/:commentId/resolve', (req, res) => {
+  const commission = getCommission(req)
+  const comment = commission.comments.find(candidate => candidate.id === req.params.commentId)
+  const back = req.body._returnTo === 'source' ? CE + '/source' : CE + '/review'
+  if (comment && !comment.resolved) {
+    comment.resolved = true
+    ceLog(commission, CE_OFFICER.name, 'Resolved comment on ' + ceCommentLabel(comment),
+      { text: 'View comment', href: CE + '/review#comment-' + comment.id })
+  }
+  res.redirect(back + (comment ? '#comment-' + comment.id : ''))
+})
+
+router.post(CE + '/review/resolve-all', (req, res) => {
+  const commission = getCommission(req)
+  const open = commission.comments.filter(comment => !comment.resolved)
+  if (open.length) {
+    open.forEach(comment => { comment.resolved = true })
+    ceLog(commission, CE_OFFICER.name, 'Resolved all comments (' + open.length + ')')
+  }
+  res.redirect(CE + '/review')
+})
+
+// --- Notes ---
+
+router.get(CE + '/notes', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage === 'not-started') return res.redirect(CE + '/create-brief')
+  renderCommissionPage(req, res, 'notes', 'review', { notes: commission.notes.slice().reverse() })
+})
+
+router.post(CE + '/notes', (req, res) => {
+  const commission = getCommission(req)
+  const text = ceText(req.body._note)
+  if (!text) {
+    ceSetErrors(req, { note: 'Enter a note' })
+    return res.redirect(CE + '/notes')
+  }
+  const sentToConsultant = req.body._send === 'consultant'
+  commission.notes.push({
+    id: ceNextId('n', commission.notes),
+    text,
+    date: ceTimeZoneFormat({ day: 'numeric', month: 'short', year: 'numeric' }),
+    time: ceTimeZoneFormat({ hour: '2-digit', minute: '2-digit' }),
+    by: CE_OFFICER.name,
+    sentToConsultant
+  })
+  ceLog(commission, CE_OFFICER.name,
+    sentToConsultant ? 'Sent a note to ' + commission.brief.consultant.name : 'Added an internal note',
+    { text: 'View notes', href: CE + '/notes' })
+  res.redirect(CE + '/notes')
+})
+
+// --- Accept and save ---
+
+router.get(CE + '/accept', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage !== 'submitted') return res.redirect(CE + '/review')
+  // Until someone has chosen tags, start from the themes the brief asked about.
+  const selectedTags = commission.status === 'accepted' || commission.tags.length
+    ? commission.tags
+    : commission.brief.themes
+  renderCommissionPage(req, res, 'accept', 'accept', {
+    selectedTags,
+    openCount: commission.comments.filter(comment => !comment.resolved).length
+  })
+})
+
+router.post(CE + '/accept', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.stage !== 'submitted') return res.redirect(CE + '/review')
+  commission.tags = ceThemes(req.body._tags)
+  if (commission.status === 'accepted') {
+    ceLog(commission, CE_OFFICER.name, 'Updated tags')
+  } else {
+    commission.status = 'accepted'
+    commission.acceptedOn = ceToday()
+    ceLog(commission, CE_OFFICER.name, 'Accepted document and added it to the evidence library',
+      { text: 'View version', href: CE + '/review' })
+  }
+  res.redirect(CE + '/source')
+})
+
+// --- Manage source ---
+
+router.get(CE + '/source', (req, res) => {
+  const commission = getCommission(req)
+  if (commission.status !== 'accepted') return res.redirect(CE + '/accept')
+  const numbered = numberCommission(commission)
+  const report = commission.report
+  const slug = (report.title || commission.brief.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  renderCommissionPage(req, res, 'source', 'source', {
+    comments: numbered.comments,
+    openCount: commission.comments.filter(comment => !comment.resolved).length,
+    history: commission.history.slice().reverse(),
+    file: report.file || { name: (slug || 'report') + '.pdf', meta: 'Generated from the submitted report' },
+    summary: commission.summary || (report.paragraphs[0] && report.paragraphs[0].text) || ''
+  })
 })
 
 // --- Policy writing prototype ---
@@ -1743,4 +2231,621 @@ router.get('/statement-of-compliance/documents/:title', (req, res) => {
   res.render('statement-of-compliance/documents/show.html', {
     title: req.params.title
   })
+})
+// --- Policy drafting with starting points ---
+//
+// Built from the Figma designs for this journey (see CLAUDE.md). Two phases:
+//   /policy-writing-drafting/starting-points      - review starting points (include/remove)
+//   /policy-writing-drafting/chapters             - chapters made from them, and their briefs
+//   /policy-writing-drafting/chapters/:id/<step>  - per-chapter steps, in CHAPTER_STEPS order
+//
+// Slug note: a sibling of /policy-writing rather than nested in it, for the same reason as
+// policy-writing-v2 — nested, the segment would be caught by router.param('variant', ...).
+//
+// Everything the user changes is in req.session.data.policyDrafting, read only through
+// getPolicyDrafting. Static reference content (officers, evidence library, viewer extracts) is in
+// app/data/policy-drafting.js. Form fields holding free text are named with a leading "_" so
+// the kit's session middleware doesn't copy them into the top level of session data as well.
+
+const {
+  OFFICERS,
+  NPPF_URL,
+  getRequirementsForChapter,
+  LIBRARY_STATUS_COLOURS,
+  SOURCE_TYPES,
+  PLANNING_DESIGNATIONS,
+  SITES,
+  getLibrarySource,
+  searchLibrary,
+  getLibrarySearchTerms,
+  getViewerContent,
+  getConsultationsForChapter,
+  getSuggestedPolicyAreas
+} = require('./data/policy-drafting.js')
+
+const PD = '/policy-writing-drafting'
+const POLICY_DRAFTING_SCHEMA_VERSION = 2
+const PD_RESULTS_PER_PAGE = 10
+
+function ensurePolicyDraftingShape (req) {
+  if (req.session.data.policyDraftingSchemaVersion !== POLICY_DRAFTING_SCHEMA_VERSION) {
+    req.session.data.policyDrafting = JSON.parse(JSON.stringify(sessionDataDefaults.policyDrafting))
+    req.session.data.policyDraftingOwned = true
+    req.session.data.policyDraftingSchemaVersion = POLICY_DRAFTING_SCHEMA_VERSION
+  }
+}
+
+function getPolicyDrafting (req) {
+  ensurePolicyDraftingShape(req)
+  if (!req.session.data.policyDraftingOwned) {
+    req.session.data.policyDrafting = JSON.parse(JSON.stringify(req.session.data.policyDrafting))
+    req.session.data.policyDraftingOwned = true
+  }
+  return req.session.data.policyDrafting
+}
+
+// The per-chapter steps, in sidebar order. `done` decides the step's status icon, and together
+// they decide the chapter's status on the chapters list.
+const CHAPTER_STEPS = [
+  { slug: 'officers', label: 'Assign officers', done: chapter => chapter.officers.length > 0 },
+  { slug: 'explanatory-text', label: 'Add explanatory text', done: chapter => Boolean(chapter.explanatoryText.trim()) },
+  { slug: 'sources', label: 'Add sources', done: chapter => chapter.sources.length > 0 },
+  { slug: 'policies', label: 'Manage policies', done: chapter => Boolean(chapter.policiesConfirmed) },
+  { slug: 'draft', label: 'Draft policy', done: chapter => Object.keys(chapter.drafts).length > 0 },
+  { slug: 'export', label: 'Share and publish', done: chapter => chapter.exports.length > 0 }
+]
+
+const pdChapterUrl = (chapter, step) => PD + '/chapters/' + chapter.id + '/' + step
+
+function chapterStatus (chapter) {
+  const done = CHAPTER_STEPS.filter(step => step.done(chapter)).length
+  if (done === 0) return 'Not started'
+  return done === CHAPTER_STEPS.length ? 'Completed' : 'In progress'
+}
+
+function newChapter (id, name, startingPointIds) {
+  return {
+    id,
+    name,
+    startingPointIds,
+    brief: '',
+    officers: [],
+    explanatoryText: '',
+    sources: [],
+    policyAreas: null,
+    drafts: {},
+    exports: []
+  }
+}
+
+function uniqueChapterId (data, base) {
+  const slug = String(base).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'chapter'
+  let id = slug
+  let n = 2
+  while (data.chapters.some(chapter => chapter.id === id)) id = slug + '-' + n++
+  return id
+}
+
+// Keeps the chapters in step with the starting points once they're reviewed: an included
+// starting point with no chapter gets one, and a chapter left with none of its starting points
+// is removed — unless work has started on it, which is never thrown away. Chapters added by hand
+// (never had a starting point) are left alone.
+function syncChaptersWithStartingPoints (data) {
+  const included = data.startingPoints.filter(point => point.included)
+  const includedIds = included.map(point => point.id)
+
+  data.chapters = data.chapters.filter(chapter => {
+    const hadStartingPoints = chapter.startingPointIds.length > 0
+    chapter.startingPointIds = chapter.startingPointIds.filter(id => includedIds.includes(id))
+    const orphaned = hadStartingPoints && chapter.startingPointIds.length === 0
+    return !(orphaned && chapterStatus(chapter) === 'Not started' && !chapter.brief)
+  })
+
+  included.forEach(point => {
+    const covered = data.chapters.some(chapter => chapter.startingPointIds.includes(point.id))
+    if (!covered) data.chapters.push(newChapter(uniqueChapterId(data, point.name), point.name, [point.id]))
+  })
+}
+
+// Materialises the suggested policy areas the first time a chapter's policies are touched, so
+// editing or adding one has a list to change.
+function ensurePolicyAreas (chapter) {
+  if (!Array.isArray(chapter.policyAreas)) {
+    chapter.policyAreas = getSuggestedPolicyAreas(chapter.name).map(area => ({
+      id: area.ref.toLowerCase(),
+      ref: area.ref,
+      name: area.name,
+      selected: true
+    }))
+  }
+  return chapter.policyAreas
+}
+
+function selectedPolicyAreas (chapter) {
+  return (chapter.policyAreas || []).filter(area => area.selected)
+}
+
+function pdTimestamp () {
+  return new Date().toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Europe/London' })
+}
+
+// Sidebar: the starting points phase, then every chapter, with the current chapter's steps
+// nested under it (the shared side navigation's `children`).
+//
+// The chapters only appear once "Manage chapters" is complete — until then there are no
+// settled chapters to list. The exception is a page inside a chapter (reached from the landing
+// page's shortcut, say), which still needs its own steps to navigate by.
+function buildDraftingSidebar (data, active) {
+  const everyChapterHasBrief = data.chapters.length > 0 && data.chapters.every(chapter => chapter.brief.trim())
+  const firstWithoutBrief = data.chapters.find(chapter => !chapter.brief.trim())
+
+  const phaseItem = (key, text, href, done) => ({
+    text,
+    href,
+    active: active.page === key,
+    status: done ? 'Completed' : (active.page === key ? 'In progress' : 'Not started')
+  })
+
+  const sections = [
+    {
+      heading: 'Starting points',
+      items: [
+        phaseItem('review', 'Review starting points', PD + '/starting-points', data.reviewed),
+        phaseItem('chapters', 'Manage chapters', PD + '/chapters', data.chaptersConfirmed),
+        phaseItem('briefs', 'Add briefs',
+          firstWithoutBrief ? pdChapterUrl(firstWithoutBrief, 'brief') : PD + '/chapters',
+          everyChapterHasBrief)
+      ]
+    }
+  ]
+
+  if (!data.chaptersConfirmed && !active.chapterId) return sections
+
+  sections.push({
+    heading: 'Chapters',
+    items: data.chapters.map(chapter => {
+      const item = { text: chapter.name, href: pdChapterUrl(chapter, CHAPTER_STEPS[0].slug) }
+      if (chapter.id === active.chapterId) {
+        item.children = CHAPTER_STEPS.map(step => {
+          const isActive = step.slug === active.step
+          return {
+            text: step.label,
+            href: pdChapterUrl(chapter, step.slug),
+            active: isActive,
+            status: step.done(chapter) ? 'Completed' : (isActive ? 'In progress' : 'Not started')
+          }
+        })
+      }
+      return item
+    })
+  })
+  return sections
+}
+
+// Every chapter page needs the chapter, the sidebar and the breadcrumb root.
+function renderChapterPage (req, res, view, step, locals) {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  res.render('policy-writing-drafting/' + view, Object.assign({
+    chapter,
+    sidebarSections: buildDraftingSidebar(data, { chapterId: chapter.id, step, page: step === 'brief' ? 'briefs' : null })
+  }, locals))
+}
+
+// Loads the chapter for every /chapters/:pdChapterId/... route, and sends anything stale
+// (a merged or removed chapter) back to the list.
+router.param('pdChapterId', (req, res, next, id) => {
+  const chapter = getPolicyDrafting(req).chapters.find(candidate => candidate.id === id)
+  if (!chapter) return res.redirect(PD + '/chapters')
+  req.pdChapter = chapter
+  next()
+})
+
+router.get(PD, (req, res) => {
+  res.render('policy-writing-drafting/index', {
+    userStories: getUserStories(['POUS1', 'POUS3', 'POUS4'])
+  })
+})
+
+// --- Starting points ---
+
+router.get(PD + '/starting-points', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/starting-points/index', {
+    startingPoints: data.startingPoints,
+    sidebarSections: buildDraftingSidebar(data, { page: 'review' })
+  })
+})
+
+router.post(PD + '/starting-points', (req, res) => {
+  const data = getPolicyDrafting(req)
+  data.reviewed = true
+  syncChaptersWithStartingPoints(data)
+  res.redirect(PD + '/chapters')
+})
+
+router.post(PD + '/starting-points/:pointId/toggle', (req, res) => {
+  const point = getPolicyDrafting(req).startingPoints.find(candidate => candidate.id === req.params.pointId)
+  if (point) point.included = !point.included
+  res.redirect(PD + '/starting-points')
+})
+
+const STARTING_POINT_SOURCES = ['Adopted plan', 'New need', 'NPPF/SDS']
+
+router.get(PD + '/starting-points/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/starting-points/new', {
+    sources: STARTING_POINT_SOURCES,
+    sidebarSections: buildDraftingSidebar(data, { page: 'review' })
+  })
+})
+
+router.post(PD + '/starting-points/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const name = (req.body._startingPointName || '').trim()
+  if (name) {
+    data.startingPoints.push({
+      id: 'sp-' + Date.now(),
+      name,
+      source: STARTING_POINT_SOURCES.includes(req.body._startingPointSource) ? req.body._startingPointSource : 'New need',
+      included: true
+    })
+  }
+  res.redirect(PD + '/starting-points')
+})
+
+// --- Chapters and briefs ---
+
+router.get(PD + '/chapters', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/chapters/index', {
+    chapters: data.chapters.map(chapter => Object.assign({ status: chapterStatus(chapter) }, chapter)),
+    sidebarSections: buildDraftingSidebar(data, { page: 'chapters' })
+  })
+})
+
+router.post(PD + '/chapters', (req, res) => {
+  const data = getPolicyDrafting(req)
+  data.chaptersConfirmed = true
+  const next = data.chapters.find(chapter => !chapter.brief.trim()) || data.chapters[0]
+  res.redirect(next ? pdChapterUrl(next, 'brief') : PD + '/chapters')
+})
+
+router.get(PD + '/chapters/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  res.render('policy-writing-drafting/chapters/new', {
+    sidebarSections: buildDraftingSidebar(data, { page: 'chapters' })
+  })
+})
+
+router.post(PD + '/chapters/new', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const name = (req.body._chapterName || '').trim()
+  if (name) data.chapters.push(newChapter(uniqueChapterId(data, name), name, []))
+  res.redirect(PD + '/chapters')
+})
+
+router.get(PD + '/chapters/:pdChapterId/brief', (req, res) => {
+  const data = getPolicyDrafting(req)
+  renderChapterPage(req, res, 'chapters/brief', 'brief', {
+    chapters: data.chapters,
+    requirements: getRequirementsForChapter(req.pdChapter.name),
+    nppfUrl: NPPF_URL
+  })
+})
+
+// Saving the brief can also move the chapter into another one ("Assign to chapter"): its
+// starting points and brief go to the target, and this chapter is removed.
+router.post(PD + '/chapters/:pdChapterId/brief', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  chapter.brief = (req.body._brief || '').trim().slice(0, 500)
+
+  const target = data.chapters.find(candidate => candidate.id === req.body._assignTo)
+  if (target && target !== chapter) {
+    target.startingPointIds = target.startingPointIds.concat(chapter.startingPointIds)
+    if (chapter.brief) target.brief = [target.brief, chapter.brief].filter(Boolean).join('\n\n').slice(0, 500)
+    data.chapters = data.chapters.filter(candidate => candidate !== chapter)
+  }
+  res.redirect(PD + '/chapters')
+})
+
+// --- Chapter steps ---
+
+router.get(PD + '/chapters/:pdChapterId/officers', (req, res) => {
+  const chapter = req.pdChapter
+  renderChapterPage(req, res, 'chapter/officers', 'officers', {
+    assigned: chapter.officers.map(id => OFFICERS.find(officer => officer.id === id)).filter(Boolean),
+    available: OFFICERS.filter(officer => !chapter.officers.includes(officer.id))
+  })
+})
+
+router.post(PD + '/chapters/:pdChapterId/officers', (req, res) => {
+  const chapter = req.pdChapter
+  if (req.body._action === 'continue') return res.redirect(pdChapterUrl(chapter, 'explanatory-text'))
+
+  const officer = OFFICERS.find(candidate => candidate.id === req.body._officer)
+  if (officer && !chapter.officers.includes(officer.id)) chapter.officers.push(officer.id)
+  res.redirect(pdChapterUrl(chapter, 'officers'))
+})
+
+router.post(PD + '/chapters/:pdChapterId/officers/:officerId/remove', (req, res) => {
+  const chapter = req.pdChapter
+  chapter.officers = chapter.officers.filter(id => id !== req.params.officerId)
+  res.redirect(pdChapterUrl(chapter, 'officers'))
+})
+
+router.get(PD + '/chapters/:pdChapterId/explanatory-text', (req, res) => {
+  renderChapterPage(req, res, 'chapter/explanatory-text', 'explanatory-text', {
+    requirements: getRequirementsForChapter(req.pdChapter.name),
+    nppfUrl: NPPF_URL
+  })
+})
+
+router.post(PD + '/chapters/:pdChapterId/explanatory-text', (req, res) => {
+  const chapter = req.pdChapter
+  chapter.explanatoryText = (req.body._explanatoryText || '').trim()
+  res.redirect(pdChapterUrl(chapter, 'sources'))
+})
+
+// Search and filters are sticky in session (the kit stores req.query there), named pd* so they
+// can't collide with the evidence library's own evidenceSearch filter. The page number is
+// "_page" so it isn't sticky: a new search should start from the first page.
+router.get(PD + '/chapters/:pdChapterId/sources', (req, res) => {
+  const chapter = req.pdChapter
+  const session = req.session.data
+  const filters = {
+    query: session.pdSearch || '',
+    type: session.pdSourceType || '',
+    area: session.pdPolicyArea || '',
+    designation: session.pdDesignation || '',
+    site: session.pdSite || ''
+  }
+  const searched = Object.values(filters).some(Boolean)
+  const results = searched ? searchLibrary(filters) : []
+  const pageCount = Math.max(1, Math.ceil(results.length / PD_RESULTS_PER_PAGE))
+  const page = Math.min(pageCount, Math.max(1, parseInt(req.query._page, 10) || 1))
+  const start = (page - 1) * PD_RESULTS_PER_PAGE
+
+  renderChapterPage(req, res, 'chapter/sources', 'sources', {
+    chapterSources: chapter.sources.map(getLibrarySource).filter(Boolean),
+    filters,
+    searched,
+    results: results.slice(start, start + PD_RESULTS_PER_PAGE),
+    resultCount: results.length,
+    firstResult: results.length ? start + 1 : 0,
+    lastResult: Math.min(start + PD_RESULTS_PER_PAGE, results.length),
+    page,
+    pageCount,
+    statusColours: LIBRARY_STATUS_COLOURS,
+    searchTermsJson: JSON.stringify(getLibrarySearchTerms()),
+    // Set after "Add selected sources", for the confirmation banner.
+    addedCount: parseInt(req.query._added, 10) || 0,
+    sourceTypes: SOURCE_TYPES,
+    policyAreas: POLICY_AREAS,
+    designations: PLANNING_DESIGNATIONS,
+    sites: SITES
+  })
+})
+
+// Adding or removing keeps the user on the page of results they were on.
+function sourcesReturnUrl (chapter, page, extra) {
+  const params = []
+  const pageNumber = parseInt(page, 10)
+  if (pageNumber > 1) params.push('_page=' + pageNumber)
+  if (extra) params.push(extra)
+  return pdChapterUrl(chapter, 'sources') + (params.length ? '?' + params.join('&') : '')
+}
+
+// "Add selected sources": every ticked result in one go. Anything already on the chapter is
+// skipped, so the banner's count is what was actually added.
+router.post(PD + '/chapters/:pdChapterId/sources/add', (req, res) => {
+  const chapter = req.pdChapter
+  const incoming = asArray(req.body._sourceIds)
+    .filter(id => getLibrarySource(id) && !chapter.sources.includes(id))
+    .filter((id, index, all) => all.indexOf(id) === index)
+  chapter.sources.push(...incoming)
+  res.redirect(sourcesReturnUrl(chapter, req.body._page, incoming.length ? '_added=' + incoming.length : ''))
+})
+
+router.post(PD + '/chapters/:pdChapterId/sources/:sourceId/remove', (req, res) => {
+  const chapter = req.pdChapter
+  chapter.sources = chapter.sources.filter(id => id !== req.params.sourceId)
+  res.redirect(sourcesReturnUrl(chapter, req.body._page))
+})
+
+router.get(PD + '/chapters/:pdChapterId/policies', (req, res) => {
+  renderChapterPage(req, res, 'chapter/policies', 'policies', {
+    policyAreas: ensurePolicyAreas(req.pdChapter)
+  })
+})
+
+router.post(PD + '/chapters/:pdChapterId/policies', (req, res) => {
+  const chapter = req.pdChapter
+  const selected = asArray(req.body._policyAreas)
+  ensurePolicyAreas(chapter).forEach(area => { area.selected = selected.includes(area.id) })
+  chapter.policiesConfirmed = true
+  res.redirect(pdChapterUrl(chapter, 'draft'))
+})
+
+// One form for both editing a policy area and adding a policy.
+router.get(PD + '/chapters/:pdChapterId/policies/new', (req, res) => {
+  renderChapterPage(req, res, 'chapter/policy-area', 'policies', { policyArea: null })
+})
+
+router.get(PD + '/chapters/:pdChapterId/policies/:areaId/edit', (req, res) => {
+  const policyArea = ensurePolicyAreas(req.pdChapter).find(area => area.id === req.params.areaId)
+  if (!policyArea) return res.redirect(pdChapterUrl(req.pdChapter, 'policies'))
+  renderChapterPage(req, res, 'chapter/policy-area', 'policies', { policyArea })
+})
+
+router.post(PD + '/chapters/:pdChapterId/policies/new', (req, res) => {
+  const chapter = req.pdChapter
+  const ref = (req.body._policyRef || '').trim()
+  const name = (req.body._policyName || '').trim()
+  if (name) {
+    ensurePolicyAreas(chapter).push({
+      id: 'pa-' + Date.now(),
+      ref,
+      name,
+      selected: true
+    })
+  }
+  res.redirect(pdChapterUrl(chapter, 'policies'))
+})
+
+router.post(PD + '/chapters/:pdChapterId/policies/:areaId/edit', (req, res) => {
+  const chapter = req.pdChapter
+  const policyArea = ensurePolicyAreas(chapter).find(area => area.id === req.params.areaId)
+  if (policyArea) {
+    policyArea.ref = (req.body._policyRef || '').trim() || policyArea.ref
+    policyArea.name = (req.body._policyName || '').trim() || policyArea.name
+  }
+  res.redirect(pdChapterUrl(chapter, 'policies'))
+})
+
+// The sources the evidence viewer can show: the chapter's own, plus any consultation summary
+// that covers this chapter.
+function viewerSourcesFor (chapter) {
+  return chapter.sources
+    .concat(getConsultationsForChapter(chapter.name))
+    .filter((id, index, all) => all.indexOf(id) === index)
+    .map(getLibrarySource)
+    .filter(Boolean)
+}
+
+function viewerLocals (chapter, sourceId) {
+  const viewerSources = viewerSourcesFor(chapter)
+  const viewerSource = viewerSources.find(source => source.id === sourceId) || viewerSources[0] || null
+  return {
+    viewerSources,
+    viewerSource,
+    viewerContent: viewerSource ? getViewerContent(viewerSource.id) : null
+  }
+}
+
+router.get(PD + '/chapters/:pdChapterId/draft', (req, res) => {
+  const chapter = req.pdChapter
+  const areas = selectedPolicyAreas(chapter)
+  const policyArea = areas.find(area => area.id === req.query._policy) || areas[0] || null
+
+  renderChapterPage(req, res, 'chapter/draft', 'draft', Object.assign({
+    policyAreas: areas,
+    policyArea,
+    draft: (policyArea && chapter.drafts[policyArea.id]) || {}
+  }, viewerLocals(chapter, req.query._source)))
+})
+
+router.post(PD + '/chapters/:pdChapterId/draft/:areaId', (req, res) => {
+  const chapter = req.pdChapter
+  const policyArea = selectedPolicyAreas(chapter).find(area => area.id === req.params.areaId)
+  if (policyArea) {
+    chapter.drafts[policyArea.id] = {
+      title: (req.body._policyTitle || '').trim(),
+      context: (req.body._policyContext || '').trim(),
+      detail: (req.body._policyDetail || '').trim(),
+      strategic: req.body._strategic === 'yes',
+      savedAt: pdTimestamp()
+    }
+  }
+  const query = '?_policy=' + encodeURIComponent(req.params.areaId) +
+    (req.body._source ? '&_source=' + encodeURIComponent(req.body._source) : '')
+  res.redirect(pdChapterUrl(chapter, 'draft') + query)
+})
+
+// The evidence viewer on a page of its own, for "Open in new window".
+router.get(PD + '/chapters/:pdChapterId/viewer', (req, res) => {
+  res.render('policy-writing-drafting/chapter/viewer', Object.assign({
+    chapter: req.pdChapter
+  }, viewerLocals(req.pdChapter, req.query._source)))
+})
+
+// What can be viewed or exported: each drafted-for policy in this chapter, the chapter, or the
+// whole plan. Values are "<scope>:<id>" so one select or radio can carry both.
+function exportOptions (data, chapter) {
+  return selectedPolicyAreas(chapter).map(area => ({
+    value: 'policy:' + chapter.id + ':' + area.id,
+    text: area.ref + ': ' + area.name
+  })).concat([
+    { value: 'chapter:' + chapter.id, text: chapter.name + ' (full chapter)' },
+    { value: 'plan', text: 'The whole draft plan' }
+  ])
+}
+
+router.get(PD + '/chapters/:pdChapterId/export', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  renderChapterPage(req, res, 'chapter/export', 'export', {
+    chapters: data.chapters,
+    policyAreas: selectedPolicyAreas(chapter),
+    exportOptions: exportOptions(data, chapter),
+    exported: req.query._exported ? chapter.exports[chapter.exports.length - 1] : null
+  })
+})
+
+// The content a view or an export covers, as plain copies, so an export's snapshot stays as it
+// was when later drafting changes the chapter. scope is 'policy', 'chapter' or 'plan'.
+function buildDraftContent (data, scope, chapterId, policyId) {
+  const chapter = data.chapters.find(candidate => candidate.id === chapterId)
+  const chapters = scope !== 'plan' && chapter ? [chapter] : data.chapters
+
+  return JSON.parse(JSON.stringify({
+    scope,
+    chapters: chapters.map(item => ({
+      chapter: { name: item.name, explanatoryText: item.explanatoryText },
+      policyAreas: selectedPolicyAreas(item)
+        .filter(area => scope !== 'policy' || area.id === policyId)
+        .map(area => ({
+          ref: area.ref,
+          name: area.name,
+          strategic: Boolean(area.strategic),
+          draft: item.drafts[area.id] || null
+        }))
+    }))
+  }))
+}
+
+// Export option values are "policy:<chapter>:<policy area>", "chapter:<chapter>" or "plan".
+function parseExportOption (value) {
+  const [scope, chapterId, policyId] = String(value).split(':')
+  return { scope, chapterId, policyId }
+}
+
+// No file is produced — the prototype records the export in the chapter's audit log, with a
+// snapshot of what was exported so that version can be viewed later.
+router.post(PD + '/chapters/:pdChapterId/export', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const chapter = req.pdChapter
+  const option = exportOptions(data, chapter).find(candidate => candidate.value === req.body._what)
+  const format = req.body._format === 'word' ? 'Word' : 'PDF'
+  if (option) {
+    const { scope, chapterId, policyId } = parseExportOption(option.value)
+    chapter.exports.push({
+      id: 'export-' + Date.now(),
+      what: option.text,
+      format,
+      at: pdTimestamp(),
+      by: 'You',
+      snapshot: buildDraftContent(data, scope, chapterId, policyId)
+    })
+    return res.redirect(pdChapterUrl(chapter, 'export') + '?_exported=1')
+  }
+  res.redirect(pdChapterUrl(chapter, 'export'))
+})
+
+// One exported version from the audit log, opened in a new window.
+router.get(PD + '/chapters/:pdChapterId/export/:exportId', (req, res) => {
+  const chapter = req.pdChapter
+  const entry = chapter.exports.find(candidate => candidate.id === req.params.exportId)
+  if (!entry || !entry.snapshot) return res.redirect(pdChapterUrl(chapter, 'export'))
+  res.render('policy-writing-drafting/preview', Object.assign({ version: entry }, entry.snapshot))
+})
+
+// The read-only draft, opened in a new window from "View in new window". _scope is policy,
+// chapter or plan.
+router.get(PD + '/preview', (req, res) => {
+  const data = getPolicyDrafting(req)
+  const scope = ['policy', 'chapter', 'plan'].includes(req.query._scope) ? req.query._scope : 'plan'
+  res.render('policy-writing-drafting/preview',
+    buildDraftContent(data, scope, req.query._chapter, req.query._policy))
 })

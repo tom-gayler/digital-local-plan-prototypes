@@ -1,0 +1,87 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+
+{% set pageName = "Add or view notes" %}
+
+{% block content %}
+
+{# Held to the GOV.UK page width — see .dlp-ce-page. #}
+<div class="dlp-ce-page">
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Review and comment", href: "/evidence/commissioned/review" },
+  { text: "Add or view notes" }
+] }) }}
+
+{% if errorList.length %}
+  {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+{% endif %}
+
+<div class="dlp-ce-title-row">
+  <h1 class="govuk-heading-l govuk-!-margin-bottom-0">Add or view notes</h1>
+  {% if commission.status == "accepted" %}
+    {{ govukTag({ text: "Accepted", classes: "govuk-tag--green" }) }}
+  {% else %}
+    {{ govukTag({ text: "Draft", classes: "govuk-tag--grey" }) }}
+  {% endif %}
+</div>
+<p class="govuk-body-s dlp-ce-muted govuk-!-margin-top-1">Logged in as {{ viewer }}</p>
+
+<form method="post" action="/evidence/commissioned/notes" class="dlp-ce-measure" novalidate>
+  {{ govukTextarea({
+    id: "note",
+    name: "_note",
+    rows: 5,
+    label: { text: "Enter notes", classes: "govuk-label--m" },
+    hint: { text: "Add a note to this evidence source. You can send the note to " + commission.brief.consultant.name + ", the consultant working on this brief, or save it for internal use." },
+    errorMessage: { text: errors.note } if errors.note
+  }) }}
+
+  <div class="govuk-button-group">
+    {{ govukButton({ text: "Send note", name: "_send", value: "consultant" }) }}
+    {{ govukButton({ text: "Save (internal only)", name: "_send", value: "internal", classes: "govuk-button--secondary" }) }}
+  </div>
+</form>
+
+<h2 class="govuk-heading-m govuk-!-margin-top-6">All notes</h2>
+
+{% if notes.length %}
+  <table class="govuk-table dlp-ce-notes">
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header">Note</th>
+        <th scope="col" class="govuk-table__header">Date</th>
+        <th scope="col" class="govuk-table__header">Time</th>
+        <th scope="col" class="govuk-table__header">Who by</th>
+        <th scope="col" class="govuk-table__header">Shared with</th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for note in notes %}
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell dlp-ce-notes__text">{{ note.text }}</td>
+          <td class="govuk-table__cell dlp-ce-nowrap">{{ note.date }}</td>
+          <td class="govuk-table__cell">{{ note.time }}</td>
+          <td class="govuk-table__cell">{{ note.by }}</td>
+          <td class="govuk-table__cell">
+            {% if note.sentToConsultant %}
+              {{ govukTag({ text: "Consultant", classes: "govuk-tag--blue" }) }}
+            {% else %}
+              {{ govukTag({ text: "Internal", classes: "govuk-tag--grey" }) }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="govuk-body">No notes yet.</p>
+{% endif %}
+
+<p class="govuk-body"><a class="govuk-link" href="/evidence/commissioned/review">Back to review and comment</a></p>
+
+</div>
+
+{% endblock %}

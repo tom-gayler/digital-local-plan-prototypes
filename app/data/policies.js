@@ -24,13 +24,13 @@ const POLICIES = [
     ref: 'S1',
     title: 'Healthy and Inclusive City',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Sets the strategic approach to health and inclusion, expecting development to help reduce health inequalities and to be usable by everyone who lives in, works in or visits the area.'
+    summary: 'Sets the City Corporation\'s approach to creating a healthy, inclusive City by embedding health and wellbeing into the design, use and management of buildings, streets and public realm, requiring Health Impact Assessments and inclusive access for all communities.'
   },
   {
     ref: 'HL1',
     title: 'Inclusive Buildings and Spaces',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Requires development to be designed so that everyone can use buildings and public spaces independently and with dignity, going beyond minimum accessibility standards where the evidence supports it.',
+    summary: 'Requires buildings, open spaces and streets to meet the highest standards of accessibility and inclusive design, with major applications submitting equality impact assessments.',
     tags: ['Need', 'Capacity', 'Design'],
     evidenceSummary: 'Access audits and engagement with disabled residents and workers consistently found step-free routes and legible wayfinding to be the two biggest barriers. Evidence supports setting a requirement above the national minimum.',
     evidenceSources: [
@@ -59,86 +59,86 @@ const POLICIES = [
     ref: 'HL2',
     title: 'Air quality',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Requires development to be at least air quality neutral, with emissions from construction and operation assessed and mitigated in the areas worst affected.'
+    summary: 'Requires developments to be at least Air Quality Neutral, resists any worsening of nitrogen dioxide or particulate pollution, and refuses uses vulnerable to poor air quality where exposure cannot be avoided.'
   },
   {
     ref: 'HL3',
     title: 'Noise',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Manages noise between conflicting uses, expecting new residential development near established late-night and servicing activity to design out disturbance rather than constrain existing businesses.'
+    summary: 'Requires a noise assessment where development could affect noise-sensitive uses, applying the \'agent of change\' principle and requiring mitigation for construction and operational noise.'
   },
   {
     ref: 'HL4',
     title: 'Contaminated land and water quality',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Requires contamination and water quality risks to be investigated and remediated before development, in proportion to the risk the site presents.'
+    summary: 'Requires a detailed site investigation for development involving ground works, with mitigation to remediate contaminated land and protect water quality and human health.'
   },
   {
     ref: 'HL5',
     title: 'Location and protection of social and community facilities',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Resists the loss of social and community facilities and directs new provision to accessible locations where it can serve the communities that need it.'
+    summary: 'Protects existing social and community facilities in situ unless equivalent replacement provision is made, need can be met elsewhere, or no demand is demonstrated through active marketing.'
   },
   {
     ref: 'HL6',
     title: 'Public toilets',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Expects major development to provide publicly accessible toilets, including accessible and baby-changing facilities, where it generates significant footfall.'
+    summary: 'Requires publicly accessible toilets, including Changing Places facilities, in major retail, leisure and transport developments, and resists the loss of existing public toilets.'
   },
   {
     ref: 'HL7',
     title: 'Sport and recreation',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Protects existing sport and recreation facilities and supports new provision, including shared use of facilities outside their core operating hours.'
+    summary: 'Protects existing sport and recreation facilities in situ unless equivalent replacement provision is made, and encourages new facilities that are accessible and convenient to the communities they serve.'
   },
   {
     ref: 'HL8',
     title: 'Play areas and facilities',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Requires residential development to provide play space appropriate to the number of children expected, with the emphasis on doorstep play in dense locations.'
+    summary: 'Protects existing play areas, requires external play space in major residential development, and requires play facilities to be designed inclusively and sited away from poor air quality.'
   },
   {
     ref: 'HL9',
     title: 'Health Impact Assessment (HIA)',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Requires a health impact assessment for major development, proportionate to its scale, showing how health effects have shaped the scheme.'
+    summary: 'Requires a Health Impact Assessment for major development, and a full HIA where an Environmental Impact Assessment is also required, to maximise health benefits and mitigate negative impacts.'
   },
   {
     ref: 'S2',
     title: 'Safe and Secure City',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Sets the strategic approach to safety and security, expecting protective measures to be designed into development rather than added afterwards.'
+    summary: 'Sets the City Corporation\'s approach to a safe and secure City, requiring development to design out crime, meet the highest standards of fire safety, and address terrorism and emergency resilience.'
   },
   {
     ref: 'SA1',
     title: 'Publicly accessible locations',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Expects development in busy publicly accessible locations to address crowded places risk through layout and design, in consultation with counter-terrorism advisers.'
+    summary: 'Requires major developments in publicly accessible locations to carry out a counter-terrorism risk assessment, consult the City of London Police, and restrict or rationalise motor vehicle access where required.'
   },
   {
     ref: 'SA2',
     title: 'Dispersal Routes',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Protects the routes people would use to leave an area in an emergency, keeping them legible and unobstructed by new development.'
+    summary: 'Requires a Management Statement for major commercial and night-time developments setting out how patrons and workers will disperse safely to avoid overcrowding, noise and anti-social behaviour.'
   },
   {
     ref: 'SA3',
     title: 'Designing in Security',
     policyArea: 'Health, inclusion and safety',
-    summary: 'Requires security measures to be integrated into the design of buildings and public spaces so they do not create hostile or unwelcoming environments.'
+    summary: 'Requires security measures, including any Hostile Vehicle Mitigation, to be designed into development from an early stage and integrated with the public realm rather than retrofitted later.'
   },
   // --- Housing ---
   {
     ref: 'S3',
     title: 'Housing',
     policyArea: 'Housing',
-    summary: 'Sets the strategic approach to housing delivery over the plan period, including the overall target and the mix of homes needed.'
+    summary: 'Sets a minimum target of 1,706 net additional dwellings between 2025/26 and 2039/40, concentrated in or near identified residential areas, with at least 50% affordable housing on public sector land.'
   },
   {
     ref: 'HS1',
     title: 'Location of New Housing',
     policyArea: 'Housing',
-    summary: 'Directs new housing to locations where it will not compromise business functions, with particular regard to residential amenity, noise and servicing in a dense mixed-use environment.',
+    summary: 'Directs new housing to suitable sites in or near identified residential areas, and resists housing that would prejudice the City\'s primary business function or harm residential amenity.',
     tags: ['Need', 'Capacity', 'Site Allocations'],
     evidenceSummary: 'The housing needs evidence shows household growth outpacing supply over the plan period, with delivery constrained by brownfield availability and infrastructure capacity. Demand is concentrated around the best-connected areas.',
     evidenceSources: [
@@ -168,56 +168,56 @@ const POLICIES = [
     ref: 'HS2',
     title: 'Loss of housing',
     policyArea: 'Housing',
-    summary: 'Resists the net loss of existing homes, including through amalgamation, unless replacement provision of at least equivalent quality is made.'
+    summary: 'Resists the net loss of existing housing, including amalgamation of units, except where amenity is poor, units lack a separate entrance, or loss would enable beneficial business development outside residential areas.'
   },
   {
     ref: 'HS3',
     title: 'Residential environment',
     policyArea: 'Housing',
-    summary: 'Expects new homes to have a good standard of amenity, with adequate daylight, outlook, privacy and protection from noise.'
+    summary: 'Protects residential amenity from unacceptable noise, fumes, smells and vehicle or pedestrian disturbance, and requires new development to minimise overlooking and protect daylight and sunlight to existing homes.'
   },
   {
     ref: 'HS4',
     title: 'Housing quality standards',
     policyArea: 'Housing',
-    summary: 'Applies internal space, accessibility and dual-aspect standards to new homes, with limited scope for departure where the constraints of the site require it.'
+    summary: 'Requires all new housing to meet London Plan space and outdoor amenity space standards and Secured by Design certification, and to maximise communal open and leisure space.'
   },
   {
     ref: 'HS5',
     title: 'Short term residential letting',
     policyArea: 'Housing',
-    summary: 'Manages short-term letting so it does not erode permanent housing stock or the amenity of neighbouring residents.'
+    summary: 'Resists short-term letting of permanent residential premises for over 90 days a year, and does not permit short-term letting for commercial purposes where mixed with permanent residential accommodation.'
   },
   {
     ref: 'HS6',
     title: 'Student accommodation and hostels',
     policyArea: 'Housing',
-    summary: 'Supports purpose-built student accommodation and hostels in accessible locations where they do not displace conventional housing.'
+    summary: 'Permits new purpose-built student accommodation and hostels only where they meet high design standards, are well connected to education institutions, and do not prejudice the City\'s business function or residential amenity, with 35% affordable student accommodation.'
   },
   {
     ref: 'HS7',
     title: 'Older persons housing',
     policyArea: 'Housing',
-    summary: 'Supports specialist housing for older people, expecting schemes to be accessible, well connected to services and adaptable as needs change.'
+    summary: 'Seeks a minimum of 86 net additional dwellings for older people between 2023 and 2040, supporting accessible, independent-living housing and resisting the net loss of existing provision for older people.'
   },
   {
     ref: 'HS8',
     title: 'Self and custom housebuilding',
     policyArea: 'Housing',
-    summary: 'Supports self and custom build homes where sites are suitable, including plots brought forward as part of larger schemes.'
+    summary: 'Encourages the provision of self and custom build housing units within large residential schemes.'
   },
   // --- Offices ---
   {
     ref: 'S4',
     title: 'Offices',
     policyArea: 'Offices',
-    summary: 'Sets the strategic approach to office floorspace, safeguarding the area\'s primary business function while allowing the stock to adapt to changing patterns of work.'
+    summary: 'Sets a target to increase office floorspace by a minimum of 1,200,000 sqm net between 2021 and 2040, promoting retrofit of existing stock, flexible floorspace, and protection of office space from loss to other uses.'
   },
   {
     ref: 'OF1',
     title: 'Office Development',
     policyArea: 'Offices',
-    summary: 'Supports the provision and modernisation of office floorspace, protecting the area\'s primary business function while allowing for changing patterns of workplace use.',
+    summary: 'Requires office development to prioritise retrofitting existing buildings, achieve outstanding sustainable design, and provide flexible floorspace suitable for a range of occupiers, including affordable workspace where appropriate.',
     tags: ['Office', 'Need', 'Capacity'],
     evidenceSummary: 'Employment evidence points to sustained demand for high-quality, well-connected office space alongside a surplus of older stock that is difficult to let without substantial upgrade.',
     evidenceSources: [
@@ -246,26 +246,26 @@ const POLICIES = [
     ref: 'OF2',
     title: 'Protection of Existing Office Floorspace',
     policyArea: 'Offices',
-    summary: 'Resists the loss of office floorspace to other uses unless it can be shown the space is no longer needed or capable of meeting modern requirements.'
+    summary: 'Resists the loss of existing office floorspace unless it is not strategically important, would not compromise nearby office potential, and no demand is demonstrated through at least 12 months of marketing.'
   },
   {
     ref: 'OF3',
     title: 'Temporary \'Meanwhile\' Uses',
     policyArea: 'Offices',
-    summary: 'Supports temporary meanwhile uses in vacant premises where they add activity at street level and do not prejudice the return of the permanent use.'
+    summary: 'Encourages temporary \'meanwhile\' uses of vacant commercial buildings for up to 36 months where there is no harm to amenity or the City\'s business role, but does not permit residential use.'
   },
   // --- Retail ---
   {
     ref: 'S5',
     title: 'Retail and active frontages',
     policyArea: 'Retail',
-    summary: 'Sets the strategic approach to retail, concentrating activity in the designated centres and keeping street frontages active.'
+    summary: 'Seeks to make the City\'s retail areas more vibrant by focusing large-scale retail development in the four Principal Shopping Centres and encouraging active frontages and a wider mix of uses across the Square Mile.'
   },
   {
     ref: 'RE1',
     title: 'Principal Shopping Centres',
     policyArea: 'Retail',
-    summary: 'Protects and enhances the identified principal shopping centres as the focus for retail activity, resisting changes of use that would undermine their retail function.',
+    summary: 'Retains the role of the Principal Shopping Centres as concentrations of comparison and convenience shopping, resisting the loss of ground floor retail frontage and floorspace within them.',
     tags: ['Need', 'Capacity'],
     evidenceSummary: 'Retail evidence shows footfall recovering unevenly, with the designated centres performing more strongly than dispersed frontages.',
     evidenceSources: [
@@ -292,32 +292,32 @@ const POLICIES = [
     ref: 'RE2',
     title: 'Active frontages',
     policyArea: 'Retail',
-    summary: 'Requires ground floor frontages on identified streets to be active and open to the public, avoiding blank or inactive elevations.'
+    summary: 'Encourages active frontage uses at ground floor level across the City, and resists their loss unless no demand is demonstrated through at least 12 months of active marketing.'
   },
   {
     ref: 'RE3',
     title: 'Specialist retail uses and clusters',
     policyArea: 'Retail',
-    summary: 'Protects established specialist retail clusters where they contribute to the area\'s character and draw.'
+    summary: 'Seeks to retain specialist retail uses and premises that are historically and culturally significant, and supports existing and potential retail clusters that contribute to an area\'s character and vibrancy.'
   },
   {
     ref: 'RE4',
     title: 'Markets',
     policyArea: 'Retail',
-    summary: 'Protects existing markets and supports new market activity where it adds to the vitality of the surrounding streets.'
+    summary: 'Encourages markets and temporary retail pop-ups of an appropriate scale that enhance nearby retail centres without harming amenity, obstructing movement, or causing permanent loss of open space.'
   },
   // --- Culture and visitors ---
   {
     ref: 'S6',
     title: 'Culture and Visitors',
     policyArea: 'Culture and visitors',
-    summary: 'Sets the strategic approach to culture and visitors, supporting the area\'s cultural offer and managing the pressures that visitor numbers bring.'
+    summary: 'Sets the City Corporation\'s approach to maintaining and enhancing the City\'s cultural, leisure and visitor offer, requiring Culture and Vibrancy Plans for major developments and protecting existing cultural facilities from loss.'
   },
   {
     ref: 'CV1',
     title: 'Protection of Existing Cultural Infrastructure, and Leisure, Recreation and Visitor Arts and Cultural Facilities',
     policyArea: 'Culture and visitors',
-    summary: 'Resists the loss of existing cultural, leisure and visitor facilities unless replacement provision of equivalent quality is made, recognising their role in the area\'s identity and evening economy.',
+    summary: 'Resists the loss of existing visitor, arts and cultural facilities unless equivalent replacement provision is made, need can be met elsewhere, or no demand is demonstrated for a similar use.',
     tags: ['Heritage', 'Need'],
     evidenceSummary: 'The cultural infrastructure audit records a net loss of smaller venues over the last decade, with affordability and lease insecurity the most cited causes.',
     evidenceSources: [
@@ -346,44 +346,44 @@ const POLICIES = [
     ref: 'CV2',
     title: 'Provision of Arts, Culture and Leisure Facilities',
     policyArea: 'Culture and visitors',
-    summary: 'Supports new arts, culture and leisure facilities, expecting major development to contribute to cultural provision where it is viable.'
+    summary: 'Requires major developments of 10,000 sqm or more to provide on-site arts, culture or leisure facilities, and smaller major developments to provide proportionate on- or off-site provision.'
   },
   {
     ref: 'CV3',
     title: 'Provision of Visitor Facilities',
     policyArea: 'Culture and visitors',
-    summary: 'Supports visitor facilities in accessible locations, including seating, toilets and wayfinding along the busiest visitor routes.'
+    summary: 'Encourages visitor facilities such as seating, shelter, accessible public toilets and wayfinding in new cultural developments and nearby open spaces and public realm.'
   },
   {
     ref: 'CV4',
     title: 'Hotels',
     policyArea: 'Culture and visitors',
-    summary: 'Directs new hotel development to suitable locations, resisting proposals that would harm residential amenity or displace other priority uses.'
+    summary: 'Permits hotels and visitor accommodation where they comply with office floorspace protection policy, avoid harming neighbouring amenity, provide active frontages, and meet London Plan accessibility standards.'
   },
   {
     ref: 'CV5',
     title: 'Evening and Night-Time Economy',
     policyArea: 'Culture and visitors',
-    summary: 'Supports a diverse evening and night-time economy in identified areas, managing cumulative impacts on residents through design and operating conditions.'
+    summary: 'Permits new evening and night-time entertainment uses where there is no unacceptable impact on residential and environmental amenity, requiring Management Statements and mitigation for nearby residential development under the agent of change principle.'
   },
   {
     ref: 'CV6',
     title: 'Public Art',
     policyArea: 'Culture and visitors',
-    summary: 'Encourages public art as part of major development, with commissioning and long-term maintenance arrangements agreed at the outset.'
+    summary: 'Encourages new permanent and temporary public art in appropriate locations, protects existing works of art and memorials, and requires financial provision for their ongoing maintenance.'
   },
   // --- Infrastructure ---
   {
     ref: 'S7',
     title: 'Infrastructure and Utilities',
     policyArea: 'Infrastructure',
-    summary: 'Sets the strategic approach to infrastructure and utilities, expecting provision to be planned and delivered alongside the growth it supports.'
+    summary: 'Requires all development to minimise demand for power, water and utilities, connect to existing pipe subways where feasible, and engage with infrastructure providers early to ensure capacity is in place.'
   },
   {
     ref: 'IN1',
     title: 'Infrastructure provision and connection',
     policyArea: 'Infrastructure',
-    summary: 'Requires utility infrastructure and connections to be designed into development from the outset and integrated with it, including connections to existing decentralised energy networks where feasible.',
+    summary: 'Requires utility infrastructure and connections, including energy, water, digital connectivity and drainage, to be designed into and integrated with development from the outset.',
     tags: ['Capacity', 'Infrastructure'],
     evidenceSummary: 'The infrastructure evidence identifies constrained capacity in parts of the network and a pattern of connections being retrofitted late in the development process, at greater cost and disruption.',
     evidenceSources: [
@@ -412,7 +412,7 @@ const POLICIES = [
     ref: 'IN2',
     title: 'Infrastructure Capacity',
     policyArea: 'Infrastructure',
-    summary: 'Expects development to demonstrate that sufficient infrastructure capacity exists or will be provided in step with the development it serves.',
+    summary: 'Requires development to demonstrate that it will not cause capacity or reliability issues, and to facilitate improvements, including on-site space for infrastructure, where potential capacity problems are identified.',
     tags: ['Capacity'],
     evidenceSummary: 'Capacity assessments show headroom varies sharply across the area, with the tightest constraints where the most growth is planned.',
     evidenceSources: [
@@ -439,20 +439,20 @@ const POLICIES = [
     ref: 'IN3',
     title: 'Pipe Subways',
     policyArea: 'Infrastructure',
-    summary: 'Protects the pipe subway network and requires development above or adjoining it to maintain access for maintenance and future connections.'
+    summary: 'Requires developers and utility providers to provide entry and connection points that make use of the City\'s pipe subway network where available, sharing routes with nearby developments.'
   },
   // --- Design ---
   {
     ref: 'S8',
     title: 'Design',
     policyArea: 'Design',
-    summary: 'Sets the strategic approach to design, expecting development to be well designed, responsive to its context and to improve the public realm around it.'
+    summary: 'Sets the City Corporation\'s approach to design, promoting a retrofit-first approach, minimising whole life-cycle carbon, and requiring buildings and spaces of the right scale, massing and pedestrian permeability.'
   },
   {
     ref: 'DE1',
     title: 'Sustainable Design',
     policyArea: 'Design',
-    summary: 'Requires a retrofit-first approach, with options for retention and retrofit explored before redevelopment, and whole life-cycle carbon emissions assessed and minimised on major development.',
+    summary: 'Requires a retrofit-first approach, with major development assessing site options against the Carbon Options Guidance and submitting a whole life-cycle carbon assessment, incorporating circular economy design principles.',
     tags: ['Conservation', 'Capacity'],
     evidenceSummary: 'Whole life-cycle carbon assessments show retention and retrofit outperforming redevelopment in most of the cases sampled, though viability varies with building type and condition.',
     evidenceSources: [
@@ -481,56 +481,56 @@ const POLICIES = [
     ref: 'DE2',
     title: 'Design Quality',
     policyArea: 'Design',
-    summary: 'Expects a high standard of architecture and materials, with design quality maintained from planning permission through to completion.'
+    summary: 'Requires development to be of an exemplar design standard, appropriate in scale and character to its surroundings, inclusive and accessible, with active street frontages and high quality, low carbon materials.'
   },
   {
     ref: 'DE3',
     title: 'Public Realm',
     policyArea: 'Design',
-    summary: 'Requires development to contribute to a coherent, accessible and well-maintained public realm, including footway widths that work at peak times.'
+    summary: 'Sets out how public realm schemes should provide high quality, inclusive and welcoming spaces that support wellbeing, increase green infrastructure, and reveal and enhance the City\'s heritage.'
   },
   {
     ref: 'DE4',
     title: 'Terraces and Elevated Public Spaces',
     policyArea: 'Design',
-    summary: 'Supports publicly accessible terraces and elevated spaces where genuine public access, step-free routes and long-term management are secured.'
+    summary: 'Encourages roof terraces that are visually integrated into a building\'s design and do not harm residential amenity or protected views, and requires tall buildings to provide free, publicly accessible elevated space.'
   },
   {
     ref: 'DE5',
     title: 'Shopfronts',
     policyArea: 'Design',
-    summary: 'Expects shopfronts to be well proportioned, accessible and sympathetic to the building and street they sit in.'
+    summary: 'Requires shopfronts to be of a high design standard that respects the building\'s context, avoids external shutters, and ensures inclusive access and appropriate signage and lighting.'
   },
   {
     ref: 'DE6',
     title: 'Advertisements',
     policyArea: 'Design',
-    summary: 'Manages the scale, location and illumination of advertisements so they do not harm visual amenity or highway safety.'
+    summary: 'Requires advertising to be restrained and in keeping with the City\'s character, resisting excessive or obtrusive signage and illuminated advertisements above ground floor level.'
   },
   {
     ref: 'DE7',
     title: 'Daylight and sunlight',
     policyArea: 'Design',
-    summary: 'Requires daylight and sunlight impacts to be assessed against the density and character of the surrounding area, and unacceptable losses avoided.'
+    summary: 'Requires development to demonstrate acceptable daylight and sunlight to nearby dwellings and other sensitive receptors, having regard to Building Research Establishment guidelines.'
   },
   {
     ref: 'DE8',
     title: 'Lighting',
     policyArea: 'Design',
-    summary: 'Requires external lighting to be designed to light only what it needs to, limiting glare, spill and effects on biodiversity.'
+    summary: 'Requires lighting design to reduce energy consumption, avoid unnecessary spillage, and protect light-sensitive uses and biodiversity, with heritage assets lit sympathetically.'
   },
   // --- Transport ---
   {
     ref: 'S9',
     title: 'Transport and Servicing',
     policyArea: 'Transport',
-    summary: 'Sets the strategic approach to transport and servicing, prioritising walking, cycling and public transport over general traffic.'
+    summary: 'Sets the City Corporation\'s approach to maintaining and improving transport infrastructure, safeguarding land for public transport capacity, minimising road danger, and providing no additional on-street car parking.'
   },
   {
     ref: 'VT1',
     title: 'The Impacts of Development on Transport',
     policyArea: 'Transport',
-    summary: 'Requires development to assess and mitigate its transport impacts, with particular regard to pedestrian comfort, servicing and the capacity of the surrounding network.',
+    summary: 'Requires development to have a positive impact on highway safety, mitigate adverse transport impacts identified at pre-application stage, and submit a Transport Assessment where thresholds by land use are exceeded.',
     tags: ['Capacity', 'Need'],
     evidenceSummary: 'Transport evidence shows pedestrian comfort levels already under strain at peak times on several key routes, and identifies servicing as a growing source of conflict.',
     evidenceSources: [
@@ -559,62 +559,62 @@ const POLICIES = [
     ref: 'VT2',
     title: 'Freight and Servicing',
     policyArea: 'Transport',
-    summary: 'Requires servicing to be planned into development, using consolidation, out-of-hours delivery and off-street facilities to reduce kerbside conflict.'
+    summary: 'Requires developments to minimise freight trips, provide on-site servicing bays wherever practicable, and restrict deliveries during peak pedestrian and residential quiet hours.'
   },
   {
     ref: 'VT3',
     title: 'Vehicle Parking',
     policyArea: 'Transport',
-    summary: 'Restricts general vehicle parking to the minimum necessary, retaining provision for disabled people and essential operational needs.'
+    summary: 'Requires development to be car-free except for Blue Badge spaces, does not permit new public car parks, and requires electric vehicle charging at all off-street parking.'
   },
   {
     ref: 'VT4',
     title: 'River Transport',
     policyArea: 'Transport',
-    summary: 'Supports use of the river for passenger and freight movement, protecting existing piers and wharves from development that would preclude it.'
+    summary: 'Supports improvements to river piers and river-based transport infrastructure, resists permanent mooring along the riverfront, and safeguards Walbrook Wharf as a river wharf and waste transfer site.'
   },
   {
     ref: 'VT5',
     title: 'Aviation Landing Facilities',
     policyArea: 'Transport',
-    summary: 'Manages helicopter and other aviation landing facilities, resisting proposals where noise and safety impacts cannot be acceptably controlled.'
+    summary: 'Does not permit heliports in the City, and only permits individual helipads where essential for emergency or security purposes.'
   },
   {
     ref: 'S10',
     title: 'Active Travel and Healthy Streets',
     policyArea: 'Transport',
-    summary: 'Sets the strategic approach to active travel, expecting streets to be designed around the healthy streets principles.'
+    summary: 'Sets the City Corporation\'s approach to active travel and healthy streets, applying the Healthy Streets Approach and expanding the cycle network so all property entrances are within 250m of it.'
   },
   {
     ref: 'AT1',
     title: 'Pedestrian Movement, Permeability and Wayfinding',
     policyArea: 'Transport',
-    summary: 'Requires development to improve pedestrian movement and permeability, with comfortable footways and legible wayfinding at street level.'
+    summary: 'Requires development to enhance pedestrian permeability with legible, step-free routes, maintain the upper level walkway network around the Barbican, and only permits loss of a pedestrian route where an equivalent alternative is provided.'
   },
   {
     ref: 'AT2',
     title: 'Active Travel including Cycling',
     policyArea: 'Transport',
-    summary: 'Supports walking and cycling, expecting development to connect to the cycle network and to provide facilities for those arriving by bike.'
+    summary: 'Requires major development to promote active travel through appropriate walking, wheeling and cycling provision, including shower, changing and storage facilities to London Cycling Design Standards.'
   },
   {
     ref: 'AT3',
     title: 'Cycle Parking',
     policyArea: 'Transport',
-    summary: 'Sets cycle parking standards for new development, with secure long-stay provision for occupiers and accessible short-stay provision for visitors.'
+    summary: 'Requires on-site cycle parking to London Plan standards, secure and undercover for long-stay use, with cargo bike and hand cart storage where ground floor retail or takeaway uses are included.'
   },
   // --- Heritage and Tall Buildings ---
   {
     ref: 'S11',
     title: 'Historic Environment',
     policyArea: 'Heritage and Tall Buildings',
-    summary: 'Sets the strategic approach to the historic environment, treating the area\'s heritage as a framework for change rather than a constraint on it.'
+    summary: 'Sets the City Corporation\'s approach to protecting, celebrating and positively managing the historic environment, conserving heritage assets and seeking their beneficial continued use, including sensitive retrofit.'
   },
   {
     ref: 'HE1',
     title: 'Managing Change to the Historic Environment',
     policyArea: 'Heritage and Tall Buildings',
-    summary: 'Sets a positive strategy for the historic environment, supporting changes of use consistent with long-term conservation and paying particular attention to historic routes, spaces and roofscapes.',
+    summary: 'Requires a Statement of Heritage Significance and Heritage Impact Assessment for proposals affecting heritage assets, with a presumption against harm to designated heritage assets unless public benefits clearly outweigh that harm.',
     tags: ['Heritage', 'Conservation'],
     evidenceSummary: 'The conservation evidence identifies constraints on the scale and design of new development in and around conservation areas, and highlights historic routes as an under-protected asset.',
     evidenceSources: [
@@ -643,38 +643,38 @@ const POLICIES = [
     ref: 'HE2',
     title: 'Ancient Monuments and Archaeology',
     policyArea: 'Heritage and Tall Buildings',
-    summary: 'Requires archaeological potential to be assessed early, with remains preserved in situ where they are of national importance.'
+    summary: 'Requires an archaeological assessment for development affecting sites of archaeological potential, with significant remains preserved in-situ and exposed to public view on major development sites where feasible.'
   },
   {
     ref: 'HE3',
     title: 'Setting of the Tower of London World Heritage Site',
     policyArea: 'Heritage and Tall Buildings',
-    summary: 'Protects the outstanding universal value of the World Heritage Site, assessing the effect development would have on its setting.'
+    summary: 'Requires a Heritage Impact Assessment for development affecting the setting of the Tower of London World Heritage Site, seeking to preserve and enhance its Outstanding Universal Value.'
   },
   {
     ref: 'S12',
     title: 'Tall Buildings',
     policyArea: 'Heritage and Tall Buildings',
-    summary: 'Sets out where tall buildings are and are not appropriate, and the design and impact tests proposals for them must meet.'
+    summary: 'Defines tall buildings as those over 75m AOD, directing them to identified tall building areas and requiring their height, design and massing to respect contour rings, local heritage and strategic views.'
   },
   {
     ref: 'S13',
     title: 'Protected Views',
     policyArea: 'Heritage and Tall Buildings',
-    summary: 'Protects identified strategic and local views, assessing development against the effect it would have on them.'
+    summary: 'Protects and enhances significant City and strategic London views, including of St Paul\'s Cathedral and the Tower of London, implementing the Mayor\'s London View Management Framework and the City\'s own St Paul\'s Heights code.'
   },
   // --- Open Spaces and Green Infrastructure ---
   {
     ref: 'S14',
     title: 'Open Spaces and Green Infrastructure',
     policyArea: 'Open Spaces and Green Infrastructure',
-    summary: 'Sets the strategic approach to open space and green infrastructure, treating it as a connected network across the area rather than a set of individual sites.'
+    summary: 'Sets the City Corporation\'s approach to a greener City, protecting existing open and green space, seeking new provision through development, and ensuring new development protects and enhances biodiversity.'
   },
   {
     ref: 'OS1',
     title: 'Protection and provision of open spaces',
     policyArea: 'Open Spaces and Green Infrastructure',
-    summary: 'Protects existing open space and requires new provision or improvement where development would increase pressure on it, with green infrastructure treated as a network rather than isolated sites.',
+    summary: 'Protects and enhances existing open space, requiring any loss to be wholly exceptional and replaced with equal or improved provision, and seeks additional publicly accessible open space in major development.',
     tags: ['Green Belt', 'AONB', 'Need'],
     evidenceSummary: 'Open space assessment finds provision well below the local standard in the most densely developed areas, with the greatest deficiency where the most growth is planned.',
     evidenceSources: [
@@ -703,38 +703,38 @@ const POLICIES = [
     ref: 'OS2',
     title: 'Urban Greening',
     policyArea: 'Open Spaces and Green Infrastructure',
-    summary: 'Applies an urban greening factor to major development, with greening designed in from the start rather than added at the end.'
+    summary: 'Requires development to demonstrate the highest feasible levels of urban greening, including a minimum Urban Greening Factor score of 0.3 for major development, with green roofs and walls maintained long-term.'
   },
   {
     ref: 'OS3',
     title: 'Biodiversity',
     policyArea: 'Open Spaces and Green Infrastructure',
-    summary: 'Requires development to protect and enhance habitats and species, with priority given to connecting existing habitats.'
+    summary: 'Requires development to incorporate measures that enhance biodiversity, including green roofs and walls, wildlife-friendly features, and planting resilient to a range of climate conditions.'
   },
   {
     ref: 'OS4',
     title: 'Biodiversity Net Gain',
     policyArea: 'Open Spaces and Green Infrastructure',
-    summary: 'Requires development to deliver measurable biodiversity net gain, on site where possible, and secured for the long term.'
+    summary: 'Requires major development to deliver Biodiversity Net Gain of at least three biodiversity units per hectare, prioritising on-site delivery and submitting a Biodiversity Gain Plan before development starts.'
   },
   {
     ref: 'OS5',
     title: 'Trees',
     policyArea: 'Open Spaces and Green Infrastructure',
-    summary: 'Protects existing trees and requires replacement planting, with species chosen for the conditions they will face over their lifetime.'
+    summary: 'Seeks to increase the City\'s tree canopy cover by protecting existing mature trees, only permitting removal of dead, dying or dangerous trees, and requiring like-for-like replacement where trees are lost.'
   },
   // --- Climate Resilience ---
   {
     ref: 'S15',
     title: 'Climate Resilience and Flood Risk',
     policyArea: 'Climate Resilience',
-    summary: 'Sets the strategic approach to climate resilience, expecting development to be adapted to the conditions projected over its lifetime.'
+    summary: 'Requires buildings and the public realm to be designed to be resilient to more frequent extreme weather, minimising overheating risk, avoiding increased flood risk, and safeguarding flood defences.'
   },
   {
     ref: 'CR1',
     title: 'Overheating and Urban Heat Island Effect',
     policyArea: 'Climate Resilience',
-    summary: 'Requires development to reduce overheating risk and avoid adding to the urban heat island effect, following the cooling hierarchy and prioritising passive measures.',
+    summary: 'Requires developments to demonstrate how they reduce overheating risk through solar shading, urban greening, passive ventilation and thermal mass, minimising the contribution to the urban heat island effect.',
     tags: ['Flood Risk', 'Capacity'],
     evidenceSummary: 'Climate risk modelling projects a marked increase in days exceeding overheating thresholds, with the effect most pronounced in the densest, least vegetated areas.',
     evidenceSources: [
@@ -761,37 +761,37 @@ const POLICIES = [
     ref: 'CR2',
     title: 'Flood Risk',
     policyArea: 'Climate Resilience',
-    summary: 'Requires flood risk to be assessed and managed, directing the most vulnerable uses away from the areas at greatest risk.'
+    summary: 'Requires a site-specific flood risk assessment for development in the City\'s flood risk area, or for major development elsewhere, demonstrating the site is safe, suitable and has adequate access and egress.'
   },
   {
     ref: 'CR3',
     title: 'Sustainable drainage systems (SuDS)',
     policyArea: 'Climate Resilience',
-    summary: 'Requires sustainable drainage on development, following the drainage hierarchy and reducing surface water run-off rates.'
+    summary: 'Requires all development to incorporate sustainable drainage systems that minimise the volume and rate of rainwater run-off into the combined sewer network, taking account of the City\'s heritage and underground infrastructure.'
   },
   {
     ref: 'CR4',
     title: 'Flood protection and flood defences',
     policyArea: 'Climate Resilience',
-    summary: 'Protects existing flood defences and requires development alongside them to allow for maintenance and future raising.'
+    summary: 'Requires development to protect and, where appropriate, enhance flood defence structures, and to contribute to an overall reduction in flood risk within and beyond the site boundary.'
   },
   {
     ref: 'S16',
     title: 'Circular Economy and Waste',
     policyArea: 'Climate Resilience',
-    summary: 'Sets the strategic approach to the circular economy, expecting materials to be retained, reused and recycled through a building\'s life.'
+    summary: 'Sets the City Corporation\'s approach to a Zero Waste City, applying circular economy principles and the waste hierarchy, and co-operating with other Waste Planning Authorities on capacity for the City\'s residual waste.'
   },
   {
     ref: 'CE1',
     title: 'Sustainable Waste Facilities and Transport',
     policyArea: 'Climate Resilience',
-    summary: 'Safeguards waste management capacity and supports facilities that move waste by rail or river rather than by road.'
+    summary: 'Requires development to integrate waste facilities into building design, minimise the environmental impact of waste transport, and prioritise rail and waterways for excavation and construction waste.'
   },
   {
     ref: 'CE2',
     title: 'New waste management sites',
     policyArea: 'Climate Resilience',
-    summary: 'Sets the tests new waste management sites must meet, including amenity, transport and design considerations.'
+    summary: 'Requires proposals for new waste management facilities to demonstrate that benefits outweigh impacts, handling locally generated waste, minimising carbon and congestion, and protecting Walbrook Wharf\'s waste operations.'
   }
 ]
 

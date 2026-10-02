@@ -14,8 +14,13 @@
     — status is optional; when present the entry's marker fills in and the status text shows,
     e.g. "Done". document/documentHref are optional too (only some entries produce a linkable
     material) — when both are present, the entry's description is followed by a link to it.
+  params.entries: array of { type, description, date, actor, status? } — status is optional;
+    when present the entry's marker fills in and the status text shows, e.g. "Done".
+  params.entries[].link: { href, text, newTab? } (optional) — a link under the entry, e.g. to
+    view the version it records. newTab adds target, rel and a visually hidden warning.
   params.caption: string (optional) — defaults to a stock "this is example content" caveat,
-    since every consumer so far is read-only illustrative content rather than a real log.
+    since most consumers are read-only illustrative content rather than a real log. Pass
+    `false` to show no caption, for a log that does record what the user does.
 #}
 
 {% macro appTimeline(params) %}
@@ -36,9 +41,20 @@
         <p class="app-timeline__text"><a class="govuk-link" href="{{ entry.documentHref }}">{{ entry.document }}</a></p>
       {% endif %}
       <p class="app-timeline__meta">{{ entry.date }} &middot; {{ entry.actor }}</p>
+      {% if entry.link %}
+        <p class="app-timeline__link">
+          <a class="govuk-link" href="{{ entry.link.href }}"
+             {%- if entry.link.newTab %} target="_blank" rel="noopener noreferrer"{% endif %}>
+            {{- entry.link.text -}}
+            {%- if entry.link.newTab %}<span class="govuk-visually-hidden"> (opens in a new tab)</span>{% endif -%}
+          </a>
+        </p>
+      {% endif %}
     </li>
   {% endfor %}
 </ol>
 
-<p class="app-timeline__caption">{{ params.caption | default("Example history — this prototype does not record your changes.") }}</p>
+{% if params.caption !== false %}
+  <p class="app-timeline__caption">{{ params.caption | default("Example history — this prototype does not record your changes.") }}</p>
+{% endif %}
 {% endmacro %}

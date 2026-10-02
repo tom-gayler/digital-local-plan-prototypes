@@ -42,6 +42,9 @@ window.GOVUKPrototypeKit.documentReady(() => {
   document.querySelectorAll('[data-dlp-evidence-draggable]').forEach(safeInit(initEvidenceDraggable))
   document.querySelectorAll('[data-dlp-evidence-drop]').forEach(safeInit(initEvidenceDrop))
   document.querySelectorAll('[data-dlp-reference-flow]').forEach(safeInit(initReferenceFlow))
+  document.querySelectorAll('[data-dlp-suggest]').forEach(safeInit(initSuggestSearch))
+  document.querySelectorAll('[data-dlp-autosubmit]').forEach(safeInit(initAutosubmit))
+  document.querySelectorAll('[data-dlp-select-all]').forEach(safeInit(initSelectAll))
 
   // Opens the evidence search dialog from a button elsewhere on the page — in the v2 writer,
   // "+ Add source" in the sources rail. The search box lives inside the dialog, so this opens
@@ -2149,4 +2152,215 @@ function initReferenceFlow (root) {
       startButton.focus()
     }
   })
+}
+
+// --- Search suggestions ---------------------------------------------------------------------
+//
+// A combobox over a list of suggested terms, read from the JSON script that
+// data-dlp-suggest-source points at ([{ term, kind, count }]). Choosing a suggestion puts it in
+// the box and submits the box's form, so the results are an ordinary server-rendered page.
+// Arrow keys move through the list (aria-activedescendant keeps focus in the input), Enter
+// chooses, Escape closes. Unlike the evidence search modal's type-ahead this knows nothing about
+// what the form does, so any GET search form can use it.
+function initSuggestSearch (root) {
+  const input = root.querySelector('[data-dlp-suggest-input]')
+  const list = root.querySelector('[data-dlp-suggest-list]')
+  const status = root.querySelector('[data-dlp-suggest-status]')
+  const source = querySelectorOrNull(root.dataset.dlpSuggestSource)
+  if (!input || !list || !source) return
+
+  let terms = []
+  try {
+    terms = JSON.parse(source.textContent)
+  } catch (error) {
+    return
+  }
+
+  const maxShown = 8
+  let options = []
+  let active = -1
+
+  function setStatus (message) {
+    if (status) status.textContent = message
+  }
+
+  function close () {
+    list.hidden = true
+    list.innerHTML = ''
+    options = []
+    active = -1
+    input.setAttribute('aria-expanded', 'false')
+    input.removeAttribute('aria-activedescendant')
+  }
+
+  function highlight (index) {
+    options.forEach((option, i) => {
+      const isActive = i === index
+      option.element.classList.toggle('dlp-suggest__option--active', isActive)
+      option.element.setAttribute('aria-selected', String(isActive))
+    })
+    active = index
+    if (index >= 0) {
+      input.setAttribute('aria-activedescendant', options[index].element.id)
+      options[index].element.scrollIntoView({ block: 'nearest' })
+    } else {
+      input.removeAttribute('aria-activedescendant')
+    }
+  }
+
+  function choose (term) {
+    input.value = term
+    close()
+    if (input.form) {
+      if (input.form.requestSubmit) input.form.requestSubmit()
+      else input.form.submit()
+    }
+  }
+
+  // Matches anywhere in the term, but terms starting with what was typed come first, then
+  // topics before individual sources, so "hous" offers "housing" before a document title.
+  function matchesFor (typed) {
+    const query = typed.toLowerCase()
+    return terms
+      .filter(option => option.term.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const aStarts = a.term.toLowerCase().startsWith(query) ? 0 : 1
+        const bStarts = b.term.toLowerCase().startsWith(query) ? 0 : 1
+        if (aStarts !== bStarts) return aStarts - bStarts
+        if (a.kind !== b.kind) return a.kind === 'Topic' ? -1 : 1
+        return a.term.localeCompare(b.term)
+      })
+      .slice(0, maxShown)
+  }
+
+  function render () {
+    const typed = input.value.trim()
+    if (typed.length < 2) {
+      close()
+      setStatus('')
+      return
+    }
+
+    const matches = matchesFor(typed)
+    list.innerHTML = ''
+    active = -1
+    input.removeAttribute('aria-activedescendant')
+
+    if (!matches.length) {
+      close()
+      setStatus('No suggested matches. Press Enter to search for ' + typed + '.')
+      return
+    }
+
+    options = matches.map((match, index) => {
+      const item = document.createElement('li')
+      item.id = input.id + '-option-' + index
+      item.className = 'dlp-typeahead__option dlp-suggest__option'
+      item.setAttribute('role', 'option')
+      item.setAttribute('aria-selected', 'false')
+
+      const label = document.createElement('span')
+      label.textContent = match.term
+      item.appendChild(label)
+
+      const kind = document.createElement('span')
+      kind.className = 'dlp-typeahead__kind'
+      kind.textContent = match.kind === 'Topic'
+        ? match.count + ' source' + (match.count === 1 ? '' : 's')
+        : 'Source'
+      item.appendChild(kind)
+
+      // mousedown rather than click, so choosing doesn't first blur the input and close the
+      // list out from under the pointer.
+      item.addEventListener('mousedown', event => {
+        event.preventDefault()
+        choose(match.term)
+      })
+      list.appendChild(item)
+      return { element: item, term: match.term }
+    })
+
+    list.hidden = false
+    input.setAttribute('aria-expanded', 'true')
+    setStatus(matches.length + ' suggested match' + (matches.length === 1 ? '' : 'es') + '. Use the up and down arrows to choose.')
+  }
+
+  input.addEventListener('input', render)
+
+  input.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown') {
+      if (list.hidden) render()
+      if (!options.length) return
+      event.preventDefault()
+      highlight(active < options.length - 1 ? active + 1 : 0)
+    } else if (event.key === 'ArrowUp') {
+      if (!options.length) return
+      event.preventDefault()
+      highlight(active > 0 ? active - 1 : options.length - 1)
+    } else if (event.key === 'Enter') {
+      // With a suggestion highlighted, Enter chooses it; otherwise the form submits whatever
+      // was typed, as a plain search box would.
+      if (active >= 0) {
+        event.preventDefault()
+        choose(options[active].term)
+      }
+    } else if (event.key === 'Escape') {
+      if (!list.hidden) {
+        event.preventDefault()
+        close()
+      }
+    }
+  })
+
+  input.addEventListener('blur', () => close())
+}
+
+// --- Submit a form when one of its fields changes ------------------------------------------
+//
+// For filter selects: the change applies at once instead of waiting for a button. The button
+// stays in the markup for anyone without JavaScript.
+function initAutosubmit (root) {
+  root.addEventListener('change', event => {
+    const form = event.target.form
+    if (!form) return
+    if (form.requestSubmit) form.requestSubmit()
+    else form.submit()
+  })
+}
+
+// --- Select all, with a running count ------------------------------------------------------
+//
+// Reveals a header checkbox that ticks every [data-dlp-select-all-item] in the root, keeps a
+// "N selected" count, and disables [data-dlp-select-all-submit] until something is ticked.
+function initSelectAll (root) {
+  const items = Array.prototype.slice.call(root.querySelectorAll('[data-dlp-select-all-item]'))
+  const toggle = root.querySelector('[data-dlp-select-all-toggle]')
+  const control = root.querySelector('[data-dlp-select-all-control]')
+  const fallback = root.querySelector('[data-dlp-select-all-fallback]')
+  const count = root.querySelector('[data-dlp-select-all-count]')
+  const submit = root.querySelector('[data-dlp-select-all-submit]')
+
+  function update () {
+    const selected = items.filter(item => item.checked).length
+    if (count) {
+      count.textContent = selected ? selected + ' selected' : 'None selected'
+    }
+    if (submit) submit.disabled = selected === 0
+    if (toggle) {
+      toggle.checked = items.length > 0 && selected === items.length
+      toggle.indeterminate = selected > 0 && selected < items.length
+    }
+  }
+
+  if (toggle && control && items.length) {
+    control.hidden = false
+    if (fallback) fallback.hidden = true
+    toggle.addEventListener('change', () => {
+      items.forEach(item => { item.checked = toggle.checked })
+      update()
+    })
+  }
+
+  items.forEach(item => item.addEventListener('change', update))
+  update()
 }

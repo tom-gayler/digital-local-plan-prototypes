@@ -1,0 +1,179 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+{% from "policy-writing-drafting/partials/evidence-viewer.html" import evidenceViewerContent, evidenceSourcePicker %}
+
+{% set pageName = "Draft policy: " + chapter.name %}
+{% set chapterUrl = "/policy-writing-drafting/chapters/" + chapter.id %}
+
+{% block content %}
+
+{{ chapterBreadcrumbs(chapter, "Draft policy") }}
+
+<h1 class="govuk-heading-xl">Draft policy: {{ chapter.name }}</h1>
+<p class="govuk-body">Draft the policy text for this chapter. You can view your draft in context with other chapters at any time.</p>
+
+{% if not policyArea %}
+
+  <div class="govuk-inset-text">
+    This chapter has no policy areas selected yet.
+    <a class="govuk-link" href="{{ chapterUrl }}/policies">Choose its policy areas</a> before drafting.
+  </div>
+
+{% else %}
+
+{#
+  Draft on the left, evidence on the right, with the shared resizable split (initSplitPane).
+  The evidence panel can be closed; "Show evidence" in the draft pane brings it back, and the
+  choice is remembered in the browser.
+#}
+<div class="dlp-split dlp-pd-split"
+     data-dlp-split
+     data-dlp-split-key="pd-draft-evidence"
+     data-dlp-split-min="35"
+     data-dlp-split-max="75"
+     data-dlp-split-default="55">
+
+  <section class="dlp-pw2-pane dlp-pd-pane" aria-labelledby="pd-draft-heading" data-dlp-split-pane="draft">
+    <div class="dlp-pw2-pane__heading">
+      <h2 class="govuk-heading-s dlp-pw2-pane__title" id="pd-draft-heading">Policy draft</h2>
+      <button type="button" class="dlp-pw2-pane__link dlp-pw2-pane__reopen"
+              data-dlp-split-reopen="evidence" hidden>
+        Show evidence
+      </button>
+    </div>
+
+    <div class="dlp-pw2-pane__body">
+      <form method="get" action="{{ chapterUrl }}/draft" class="dlp-pd-inline-field">
+        {% if viewerSource %}<input type="hidden" name="_source" value="{{ viewerSource.id }}">{% endif %}
+        <div class="govuk-form-group">
+          <label class="govuk-label govuk-label--m" for="pd-policy-area">Policy area</label>
+          <div class="govuk-hint" id="pd-policy-area-hint">Select the policy area this draft belongs to.</div>
+          <select class="govuk-select" id="pd-policy-area" name="_policy" aria-describedby="pd-policy-area-hint">
+            {% for area in policyAreas %}
+              <option value="{{ area.id }}" {% if area.id == policyArea.id %}selected{% endif %}>{{ area.ref }}: {{ area.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {{ govukButton({ text: "Change", classes: "govuk-button--secondary" }) }}
+      </form>
+
+      {% if chapter.explanatoryText %}
+        <details class="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Explanatory text for this chapter</span>
+          </summary>
+          <div class="govuk-details__text dlp-pd-prewrap">{{ chapter.explanatoryText }}</div>
+        </details>
+      {% else %}
+        <p class="govuk-body">
+          <a class="govuk-link" href="{{ chapterUrl }}/explanatory-text">Add explanatory text for this chapter</a>
+        </p>
+      {% endif %}
+
+      <form method="post" action="{{ chapterUrl }}/draft/{{ policyArea.id }}">
+        {% if viewerSource %}<input type="hidden" name="_source" value="{{ viewerSource.id }}">{% endif %}
+
+        {{ govukInput({
+          id: "pd-policy-title",
+          name: "_policyTitle",
+          value: draft.title,
+          label: { text: "Policy title", classes: "govuk-label--m" },
+          hint: { text: "Enter a clear policy title." }
+        }) }}
+
+        {{ govukTextarea({
+          id: "pd-policy-context",
+          name: "_policyContext",
+          rows: 4,
+          value: draft.context,
+          label: { text: "Policy context", classes: "govuk-label--m" },
+          hint: { text: "Explain what this policy sets out to do. Give relevant context for the policy." }
+        }) }}
+
+        {{ govukCheckboxes({
+          name: "_strategic",
+          classes: "govuk-checkboxes--small",
+          items: [{ value: "yes", text: "Mark as strategic policy", checked: draft.strategic or policyArea.strategic }]
+        }) }}
+
+        {#
+          The formatting toolbar is in the design but not wired up yet: the field is still a
+          plain textarea. Its buttons are hidden from assistive tech and the tab order, as in
+          the other policy-writing prototypes, so they don't announce controls that do nothing.
+        #}
+        <div class="govuk-form-group">
+          <label class="govuk-label govuk-label--m" for="pd-policy-detail">Policy detail</label>
+          <div class="dlp-editor-toolbar dlp-pd-toolbar">
+            <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Bold"><strong>B</strong></button>
+            <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Italic"><em>I</em></button>
+            <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Bulleted list">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><circle cx="2" cy="3" r="1.5"/><circle cx="2" cy="8" r="1.5"/><circle cx="2" cy="13" r="1.5"/><rect x="5" y="2" width="11" height="2"/><rect x="5" y="7" width="11" height="2"/><rect x="5" y="12" width="11" height="2"/></svg>
+            </button>
+            <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Link">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6.5 9.5l3-3"/><path d="M7 4.5l1.5-1.5a2.8 2.8 0 014 4L11 8.5"/><path d="M9 11.5L7.5 13a2.8 2.8 0 01-4-4L5 7.5"/></svg>
+            </button>
+            <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Image">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="2.5" width="13" height="11" rx="1"/><circle cx="5.5" cy="6" r="1.2"/><path d="M2 12l4-4 3 3 2-2 3 3"/></svg>
+            </button>
+            <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="More">&hellip;</button>
+          </div>
+          <textarea class="govuk-textarea dlp-pd-toolbar__textarea" id="pd-policy-detail" name="_policyDetail" rows="14">{{ draft.detail }}</textarea>
+        </div>
+
+        {% if draft.savedAt %}
+          <p class="govuk-body-s dlp-pd-muted">Last saved {{ draft.savedAt }}</p>
+        {% endif %}
+
+        <div class="govuk-button-group">
+          {{ govukButton({ text: "Save draft" }) }}
+          {{ govukButton({ text: "View and export chapter", classes: "govuk-button--secondary", href: chapterUrl + "/export" }) }}
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <div class="dlp-split__divider"
+       role="separator"
+       tabindex="0"
+       aria-orientation="vertical"
+       aria-label="Resize the draft and evidence panels"
+       aria-valuemin="35"
+       aria-valuemax="75"
+       aria-valuenow="55"
+       data-dlp-split-divider></div>
+
+  <section class="dlp-pw2-pane dlp-pd-pane dlp-pd-viewer" aria-labelledby="pd-viewer-heading" data-dlp-split-pane="evidence">
+    <div class="dlp-pw2-pane__heading">
+      <h2 class="govuk-heading-s dlp-pw2-pane__title" id="pd-viewer-heading">Evidence viewer</h2>
+      <span class="dlp-pw2-pane__actions">
+        {% if viewerSource %}
+          <a class="govuk-link dlp-pw2-pane__link"
+             href="{{ chapterUrl }}/viewer?_source={{ viewerSource.id }}"
+             target="_blank" rel="noopener noreferrer">
+            Open in new window<span class="govuk-visually-hidden"> (opens in a new tab)</span>
+          </a>
+        {% endif %}
+        <button type="button" class="dlp-pw2-pane__close" data-dlp-split-close="evidence">
+          <span aria-hidden="true">&#10005;</span>
+          <span class="govuk-visually-hidden">Close the evidence viewer</span>
+        </button>
+      </span>
+    </div>
+
+    {% if viewerSources | length %}
+      {{ evidenceSourcePicker(chapterUrl + "/draft", viewerSources, viewerSource, { _policy: policyArea.id }) }}
+    {% endif %}
+
+    <div class="dlp-pw2-pane__body">
+      {{ evidenceViewerContent(viewerSource, viewerContent) }}
+    </div>
+  </section>
+</div>
+
+{% endif %}
+
+{% endblock %}

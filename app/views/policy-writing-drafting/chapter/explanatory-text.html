@@ -1,0 +1,48 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+{% from "policy-writing-drafting/partials/requirements-panel.html" import requirementsPanel %}
+
+{% set pageName = "Add explanatory text: " + chapter.name %}
+
+{% block content %}
+
+{{ chapterBreadcrumbs(chapter, "Add explanatory text") }}
+
+<h1 class="govuk-heading-xl">Add explanatory text: {{ chapter.name }}</h1>
+<p class="govuk-body">Enter context and key aims for this chapter or theme. Add relevant NPPF requirements.</p>
+
+<hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+<div class="dlp-pd-with-panel">
+  <form method="post" action="/policy-writing-drafting/chapters/{{ chapter.id }}/explanatory-text" class="dlp-pd-with-panel__main">
+    {{ govukTextarea({
+      name: "_explanatoryText",
+      id: "pd-explanatory-text",
+      rows: 8,
+      value: chapter.explanatoryText,
+      label: { text: "Enter explanatory text", classes: "govuk-label--m" },
+      hint: { text: "Outline the key priorities, challenges, and high-level objectives for this policy area." }
+    }) }}
+
+    {% if chapter.brief %}
+      <details class="govuk-details">
+        <summary class="govuk-details__summary">
+          <span class="govuk-details__summary-text">Chapter brief</span>
+        </summary>
+        <div class="govuk-details__text dlp-pd-prewrap">{{ chapter.brief }}</div>
+      </details>
+    {% endif %}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Save and continue" }) }}
+      {# Placeholder from the design — does nothing yet. #}
+      {{ govukButton({ text: "Save and add another", classes: "govuk-button--secondary", type: "button" }) }}
+    </div>
+  </form>
+
+  {{ requirementsPanel(requirements, "context", nppfUrl) }}
+</div>
+
+{% endblock %}

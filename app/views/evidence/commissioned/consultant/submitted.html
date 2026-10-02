@@ -1,0 +1,37 @@
+{% extends "evidence/commissioned/partials/external-layout.html" %}
+
+{% from "govuk/components/panel/macro.njk" import govukPanel %}
+{% from "evidence/commissioned/partials/handoff.html" import ceHandoff %}
+
+{% set pageName = "Report submitted" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    {{ govukPanel({
+      titleText: "Draft report submitted",
+      html: "<strong>" + (commission.report.title | escape) + "</strong>"
+    }) }}
+
+    <h2 class="govuk-heading-m">What happens next</h2>
+    <p class="govuk-body">
+      {{ commission.brief.assignedOfficer }} and the policy team at {{ organisationName }} will review your draft.
+      You'll get an email if they comment on it or send you a note, and when it is accepted.
+    </p>
+
+    <p class="govuk-body">
+      <a class="govuk-link" href="/evidence/commissioned/consultant/submit-report">View or revise your report</a>
+    </p>
+
+    {{ ceHandoff({
+      text: "In the real service the council is told the report has arrived. To carry on as the officer, switch back.",
+      linkText: "Switch back to Danny Dyer (policy officer)",
+      href: "/evidence/commissioned/review"
+    }) }}
+
+  </div>
+</div>
+
+{% endblock %}

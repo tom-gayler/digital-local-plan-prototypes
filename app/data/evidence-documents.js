@@ -182,13 +182,16 @@ const EVIDENCE_DOCUMENTS = {
 
   // Real documents, unlike the studies above. References are genuine and the substance is
   // accurate, but the wording is summarised for this prototype rather than quoted.
+  // The restructured NPPF replaced continuously-numbered paragraphs with named policies (each
+  // numbered from 1), so these are labelled "S3"/"HO1" etc. rather than bare paragraph numbers
+  // — matching how the London Plan entry below already labels its paragraphs "H1"/"H4".
   'National Planning Policy Framework': {
-    section: 'Achieving sustainable development; Delivering a sufficient supply of homes',
+    section: 'Decision-making policies; Delivering a sufficient supply of homes',
     paragraphs: [
-      { number: '11', text: excerpt('National Planning Policy Framework', 'Paragraph 11') },
-      { number: '60', text: 'The Government’s objective is to significantly boost the supply of homes, and it is important that a sufficient amount and variety of land can come forward where it is needed.' },
-      { number: '61', text: excerpt('National Planning Policy Framework', 'Paragraph 61') },
-      { number: '63', text: excerpt('National Planning Policy Framework', 'Paragraph 63') }
+      { number: 'S3', text: excerpt('National Planning Policy Framework', 'Policy S3') },
+      { number: 'HO13', text: 'To significantly boost the supply of homes, it is important that land with permission is developed without unnecessary delay.' },
+      { number: 'HO1', text: excerpt('National Planning Policy Framework', 'Policy HO1') },
+      { number: 'HO5', text: excerpt('National Planning Policy Framework', 'Policy HO5') }
     ]
   },
 

@@ -1,0 +1,19 @@
+{#
+  "Manage chapters > <chapter> > <this page>", used on every chapter step.
+
+  Usage:
+    {% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+    {{ chapterBreadcrumbs(chapter, "Assign officers") }}
+#}
+
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+
+{% macro chapterBreadcrumbs(chapter, current) %}
+  {{ govukBreadcrumbs({
+    items: [
+      { text: "Manage chapters", href: "/policy-writing-drafting/chapters" },
+      { text: chapter.name, href: "/policy-writing-drafting/chapters/" + chapter.id + "/officers" },
+      { text: current }
+    ]
+  }) }}
+{% endmacro %}

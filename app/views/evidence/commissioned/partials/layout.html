@@ -1,0 +1,17 @@
+{#
+  Every officer page in Managing commissioned evidence: the sidebar layout, filled with the
+  sidebar the route builds (buildCommissionSidebar in app/routes.js). Pages extend this and fill
+  in `content` as usual.
+#}
+
+{% extends "layouts/main-with-sidebar.html" %}
+
+{% from "partials/side-navigation/macro.njk" import appSideNavigation %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block sideNavigation %}
+  {{ appSideNavigation({ title: "Evidence tasks", sections: sidebarSections, ariaLabel: "Evidence tasks" }) }}
+{% endblock %}

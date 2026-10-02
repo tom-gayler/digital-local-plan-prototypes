@@ -1,0 +1,421 @@
+// Managing commissioned evidence (/evidence/commissioned). Classes are dlp-ce-*.
+
+// Text pages hold to a readable measure inside the full-width sidebar layout.
+.dlp-ce-measure,
+.dlp-ce-form {
+  max-width: 46em;
+}
+
+// The sidebar layout is full-bleed. Review, notes and Manage source are held to GOV.UK's
+// standard page width instead; on Review that splits two-thirds / one-third between the
+// document and the comments, as the grid would.
+.dlp-ce-page {
+  max-width: $govuk-page-width;
+}
+
+.dlp-ce-muted {
+  color: $dlp-muted-text;
+}
+
+.dlp-ce-nowrap {
+  white-space: nowrap;
+}
+
+// Long URLs and file names would otherwise push the page sideways on a phone.
+.dlp-ce-break {
+  overflow-wrap: anywhere;
+}
+
+.dlp-ce-full-width {
+  width: 100%;
+}
+
+// The heading with its DRAFT / ACCEPTED tag beside it.
+.dlp-ce-title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+}
+
+.dlp-ce-page-head {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(4);
+}
+
+.dlp-ce-page-links {
+  @include govuk-font($size: 16);
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dlp-ce-section-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(3);
+}
+
+// Theme checkboxes in two columns, read row by row, as in the design.
+.dlp-ce-two-columns {
+  @include govuk-media-query($from: tablet) {
+    display: grid;
+    gap: 0 govuk-spacing(6);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+// A form whose only control is a button styled as a link (resolve, resolve all).
+.dlp-ce-inline-form {
+  display: inline;
+}
+
+.dlp-ce-link-button {
+  @include govuk-font($size: 16);
+  @include govuk-link-common;
+  @include govuk-link-style-default;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+// Placeholders from the design with nothing behind them yet: link-coloured, not interactive.
+.dlp-ce-placeholder {
+  @include govuk-font($size: 16);
+  color: $govuk-link-colour;
+  cursor: default;
+  text-decoration: underline;
+}
+
+// Lets Enter in a text field submit the report instead of "Add link" (see submit-report.html).
+// Off-screen rather than display: none, which some browsers skip when choosing the default button.
+.dlp-ce-default-submit {
+  height: 1px;
+  left: -9999px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+}
+
+// --- Landing page --------------------------------------------------------------------------
+
+.dlp-ce-start {
+  border-bottom: 1px solid $dlp-border-grey;
+  margin-bottom: govuk-spacing(6);
+}
+
+.dlp-ce-start__caption {
+  display: inline-block;
+  margin-left: govuk-spacing(1);
+}
+
+// --- "Prototype only" handoff --------------------------------------------------------------
+//
+// Stands in for something that would pass between two people in a real service (an email to
+// the consultant, a notification back). Dashed and purple so it can't be mistaken for part of
+// the design being tested.
+
+.dlp-ce-handoff {
+  background: govuk-colour("white");
+  border: 3px dashed $dlp-policy-accent;
+  margin: govuk-spacing(6) 0;
+  max-width: 46em;
+  padding: govuk-spacing(4);
+}
+
+.dlp-ce-handoff__label {
+  @include govuk-font($size: 16, $weight: bold);
+  color: $dlp-policy-accent;
+  margin: 0 0 govuk-spacing(2);
+  text-transform: uppercase;
+}
+
+.dlp-ce-handoff__link {
+  @include govuk-font($size: 19, $weight: bold);
+}
+
+// --- Review and comment --------------------------------------------------------------------
+
+
+.dlp-ce-review {
+  display: grid;
+  gap: govuk-spacing(5);
+
+  @include govuk-media-query($from: desktop) {
+    align-items: start;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}
+
+.dlp-ce-document {
+  border: 1px solid $dlp-border-grey;
+  min-width: 0;
+}
+
+.dlp-ce-document__toolbar {
+  @include govuk-font($size: 16);
+  background: $dlp-panel-background;
+  border-bottom: 1px solid $dlp-border-grey;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(1);
+  padding: govuk-spacing(1) govuk-spacing(2);
+
+  .dlp-editor-toolbar__button {
+    @include govuk-font($size: 16);
+    color: $dlp-muted-text;
+  }
+}
+
+.dlp-ce-document__body {
+  padding: govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    padding: govuk-spacing(6);
+  }
+}
+
+.dlp-ce-paragraph {
+  margin-bottom: govuk-spacing(4);
+}
+
+.dlp-ce-paragraph__text {
+  margin-bottom: 0;
+}
+
+// A paragraph with an open comment on it. Fill plus a left rule, so it doesn't rely on colour.
+.dlp-ce-paragraph--commented {
+  background: $dlp-highlight-background;
+  border-left: 4px solid govuk-colour("yellow");
+  padding: govuk-spacing(2) govuk-spacing(3);
+}
+
+.dlp-ce-marker {
+  @include govuk-font($size: 16, $weight: bold);
+  color: $govuk-link-colour;
+  margin-left: govuk-spacing(1);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dlp-ce-marker--resolved {
+  color: $dlp-muted-text;
+  font-weight: normal;
+}
+
+.dlp-ce-comments {
+  border: 1px solid $dlp-border-grey;
+  min-width: 0;
+  padding: govuk-spacing(3);
+
+  &:focus {
+    outline: $govuk-focus-width solid $govuk-focus-colour;
+  }
+}
+
+.dlp-ce-comments__head {
+  align-items: baseline;
+  border-bottom: 1px solid $dlp-border-grey;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(2);
+  padding-bottom: govuk-spacing(2);
+}
+
+.dlp-ce-add-comment {
+  border-top: 1px solid $dlp-border-grey;
+  margin-top: govuk-spacing(4);
+  padding-top: govuk-spacing(3);
+}
+
+// --- Comment card --------------------------------------------------------------------------
+
+.dlp-ce-comment {
+  background: $dlp-panel-background;
+  margin-bottom: govuk-spacing(3);
+  padding: govuk-spacing(3);
+
+  // The target of a [n] marker or a "View comment" link.
+  &:target,
+  &:focus {
+    outline: $govuk-focus-width solid $govuk-focus-colour;
+  }
+}
+
+.dlp-ce-comment__header {
+  align-items: flex-start;
+  display: flex;
+  gap: govuk-spacing(2);
+  justify-content: space-between;
+}
+
+.dlp-ce-comment__meta {
+  @include govuk-font($size: 16);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 govuk-spacing(2);
+  margin: 0 0 govuk-spacing(1);
+}
+
+.dlp-ce-comment__date {
+  color: $dlp-muted-text;
+}
+
+.dlp-ce-comment__section {
+  @include govuk-font($size: 16, $weight: bold);
+  color: $dlp-muted-text;
+  margin: 0 0 govuk-spacing(1);
+
+  .dlp-ce-marker {
+    margin: 0 govuk-spacing(1) 0 0;
+  }
+}
+
+.dlp-ce-comment__text {
+  margin-bottom: govuk-spacing(2);
+}
+
+.dlp-ce-reply {
+  background: govuk-colour("white");
+  border-left: 4px solid $dlp-border-grey;
+  margin: 0 0 govuk-spacing(2) govuk-spacing(3);
+  padding: govuk-spacing(2);
+}
+
+.dlp-ce-comment__actions {
+  @include govuk-font($size: 16);
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(4);
+}
+
+.dlp-ce-reply-form {
+  margin: govuk-spacing(2) 0 0;
+}
+
+// --- Submit report -------------------------------------------------------------------------
+
+.dlp-ce-wide {
+  @include govuk-media-query($from: desktop) {
+    width: 75%;
+  }
+}
+
+.dlp-ce-toolbar {
+  background: $dlp-panel-background;
+  flex-wrap: wrap;
+}
+
+.dlp-ce-report-input {
+  min-height: 18rem;
+}
+
+.dlp-ce-notes-list li {
+  border-bottom: 1px solid $dlp-border-grey;
+  padding-bottom: govuk-spacing(2);
+}
+
+// --- Notes ---------------------------------------------------------------------------------
+
+.dlp-ce-notes__text {
+  min-width: 14em;
+}
+
+.dlp-ce-notes {
+  display: block;
+  overflow-x: auto;
+
+  @include govuk-media-query($from: desktop) {
+    display: table;
+  }
+}
+
+// --- Document history ----------------------------------------------------------------------
+
+.dlp-ce-history__date {
+  color: $dlp-muted-text;
+  white-space: nowrap;
+}
+
+.dlp-ce-history {
+  display: block;
+  overflow-x: auto;
+
+  @include govuk-media-query($from: desktop) {
+    display: table;
+  }
+}
+
+// --- Manage source -------------------------------------------------------------------------
+
+.dlp-ce-source {
+  display: grid;
+  gap: govuk-spacing(6);
+
+  @include govuk-media-query($from: desktop) {
+    align-items: start;
+    grid-template-columns: minmax(0, 2.5fr) minmax(14rem, 1fr);
+  }
+}
+
+.dlp-ce-file {
+  border: 1px solid $dlp-border-grey;
+  padding: govuk-spacing(4);
+
+  @include govuk-media-query($from: desktop) {
+    margin-top: govuk-spacing(8);
+  }
+}
+
+.dlp-ce-file__name {
+  @include govuk-font($size: 19, $weight: bold);
+  align-items: flex-start;
+  display: flex;
+  gap: govuk-spacing(2);
+  margin: 0 0 govuk-spacing(1);
+}
+
+.dlp-ce-file__icon {
+  flex: none;
+}
+
+// Tags in the summary list: one wrapping row, each tag its own height, tops aligned. GOV.UK's
+// tag caps its width at 160px, which wraps the longer themes onto two lines mid-row, and has
+// negative top and bottom margins (so it doesn't heighten a table row) that make wrapped rows
+// of tags touch. Both are undone here.
+.dlp-ce-tag-list {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  .govuk-tag {
+    margin: 0;
+    max-width: none;
+  }
+}
+
+// The ACCEPTED tag and "Logged in as", centred on one line.
+.dlp-ce-status-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  margin-bottom: govuk-spacing(6);
+}

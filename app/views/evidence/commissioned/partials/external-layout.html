@@ -1,0 +1,23 @@
+{#
+  The consultant's screens. The consultant is outside the LPA, so these pages show the
+  external header rather than the service header and its internal nav. The `header` block is
+  overridden WITHOUT super() on purpose: these URLs sit under /evidence, so `activeSection` is
+  set and super() would bring the internal nav back.
+#}
+
+{% extends "layouts/main.html" %}
+
+{% from "partials/external-header/macro.njk" import appExternalHeader %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/tag/macro.njk" import govukTag %}
+
+{% block header %}
+  {{ appExternalHeader({ organisationName: organisationName, title: serviceName, user: viewer }) }}
+  {{ govukPhaseBanner({
+    tag: { text: "Prototype" },
+    text: "This is a prototype – it is not a live service. Do not enter live data or use it to support a live service"
+  }) }}
+{% endblock %}

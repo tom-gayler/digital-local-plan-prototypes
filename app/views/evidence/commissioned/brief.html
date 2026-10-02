@@ -1,0 +1,51 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% set pageName = "Brief" %}
+{% set brief = commission.brief %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Brief" }
+] }) }}
+
+<div class="dlp-ce-measure">
+
+  <h1 class="govuk-heading-l govuk-!-margin-bottom-1">{{ brief.title }}</h1>
+  <p class="govuk-body-s dlp-ce-muted">Brief sent on {{ brief.commencedOn }} · Logged in as {{ viewer }}</p>
+
+  {% set themesHtml %}
+    {% if brief.themes.length %}
+      <ul class="govuk-list">{% for theme in brief.themes %}<li>{{ theme }}</li>{% endfor %}</ul>
+    {% else %}None selected{% endif %}
+  {% endset %}
+
+  {% set supportingHtml %}
+    {% if brief.link or brief.file %}
+      <ul class="govuk-list">
+        {% if brief.link %}<li><a class="govuk-link dlp-ce-break" href="{{ brief.link }}" rel="noreferrer noopener" target="_blank">{{ brief.link }}<span class="govuk-visually-hidden"> (opens in a new tab)</span></a></li>{% endif %}
+        {% if brief.file %}<li>{{ brief.file }}</li>{% endif %}
+      </ul>
+    {% else %}None{% endif %}
+  {% endset %}
+
+  {{ govukSummaryList({ rows: [
+    { key: { text: "Brief" }, value: { html: brief.text | escape | nl2br } },
+    { key: { text: "Supporting files and links" }, value: { html: supportingHtml } },
+    { key: { text: "Themes" }, value: { html: themesHtml } },
+    { key: { text: "Consultant" }, value: { html: (brief.consultant.name | escape) + ("<br>" + (brief.consultant.organisation | escape) if brief.consultant.organisation else "") + "<br>" + (brief.consultant.email | escape) } },
+    { key: { text: "Assigned officer" }, value: { text: brief.assignedOfficer } },
+    { key: { text: "Sent from" }, value: { text: brief.sentBy } }
+  ] }) }}
+
+  <form method="post" action="/evidence/commissioned/reset" novalidate>
+    <p class="govuk-body">To try writing and sending a brief yourself, start the prototype again with an empty brief.</p>
+    <button type="submit" name="_stage" value="start" class="govuk-button govuk-button--secondary" data-module="govuk-button">Start a new brief</button>
+  </form>
+
+</div>
+
+{% endblock %}

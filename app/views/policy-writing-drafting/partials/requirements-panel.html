@@ -1,0 +1,32 @@
+{#
+  "Relevant NPPF requirements", beside the brief and the explanatory text. Each one opens in
+  place ("View more") so the summary can be copied without leaving the form.
+
+  References are to the August 2026 NPPF; the wording is summarised — see
+  app/data/policy-drafting.js.
+
+  Usage:
+    {% from "policy-writing-drafting/partials/requirements-panel.html" import requirementsPanel %}
+    {{ requirementsPanel(requirements, "brief", nppfUrl) }}
+#}
+
+{% macro requirementsPanel(requirements, pasteInto, nppfUrl) %}
+<aside class="dlp-pd-panel" aria-labelledby="pd-requirements-heading">
+  <h2 class="govuk-heading-s" id="pd-requirements-heading">Relevant NPPF requirements</h2>
+  <p class="govuk-body-s dlp-pd-panel__hint">Cut and paste into your {{ pasteInto }}.</p>
+  {% for requirement in requirements %}
+    <details class="dlp-pd-requirement">
+      <summary class="dlp-pd-requirement__summary">
+        <span class="dlp-pd-requirement__title">{{ requirement.ref }} {{ requirement.title }}</span>
+        <span class="dlp-pd-requirement__toggle govuk-link">View more</span>
+      </summary>
+      <p class="govuk-body-s dlp-pd-requirement__text">{{ requirement.text }}</p>
+    </details>
+  {% endfor %}
+  <p class="govuk-body-s dlp-pd-panel__hint govuk-!-margin-top-4 govuk-!-margin-bottom-0">
+    Summarised from the
+    <a class="govuk-link" href="{{ nppfUrl }}" target="_blank" rel="noopener noreferrer">National Planning Policy Framework (August 2026, PDF)<span class="govuk-visually-hidden"> (opens in a new tab)</span></a>.
+    Check the wording against the Framework before using it.
+  </p>
+</aside>
+{% endmacro %}

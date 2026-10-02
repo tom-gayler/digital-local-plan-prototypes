@@ -1,0 +1,52 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Policy drafting with starting points" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <a class="govuk-back-link" href="/policy-writing">Back to Policy</a>
+
+    <h1 class="govuk-heading-xl">Policy drafting with starting points</h1>
+
+    <p class="govuk-body">
+      Start from the areas your local plan needs to cover, suggested from your adopted plan,
+      national requirements and new needs. Turn them into chapters, give each a brief, then
+      work through each chapter: assign officers, write the explanatory text, gather sources,
+      choose its policies and draft them with the evidence open beside you.
+    </p>
+
+    {# Read from app/data/user-stories.js by the route, so the wording matches /user-stories. #}
+    <h2 class="govuk-heading-m">User stories</h2>
+
+    <dl class="dlp-story-list govuk-!-margin-bottom-6">
+      {% for story in userStories %}
+        <div class="dlp-story-list__item">
+          <dt class="dlp-story-list__ref">{{ story.ref }}</dt>
+          <dd class="dlp-story-list__text">{{ story.text }}</dd>
+        </div>
+      {% endfor %}
+    </dl>
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+    <h2 class="govuk-heading-m">
+      <a class="govuk-link" href="/policy-writing-drafting/starting-points">Review starting points</a>
+    </h2>
+    <p class="govuk-body">
+      Begin at the start of the journey, with example starting points for the City of London.
+    </p>
+
+    <h2 class="govuk-heading-m">
+      <a class="govuk-link" href="/policy-writing-drafting/chapters/housing/draft">Go straight to drafting the Housing chapter</a>
+    </h2>
+    <p class="govuk-body">
+      Skip to a chapter that is already part-way through, with officers and sources in place.
+    </p>
+
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,113 @@
+{#
+  The evidence viewer's content for one source: a document extract (numbered paragraphs, section
+  headings and tables), a consultation summary, or
+  a note that there's nothing to show. Used in the draft page's side panel and on the
+  stand-alone viewer page. Content comes from VIEWER_CONTENT in app/data/policy-drafting.js.
+
+  Usage:
+    {% from "policy-writing-drafting/partials/evidence-viewer.html" import evidenceViewerContent %}
+    {{ evidenceViewerContent(viewerSource, viewerContent) }}
+#}
+
+{% macro evidenceViewerContent(source, content) %}
+  {% if not source %}
+    <p class="govuk-body dlp-pd-muted">This chapter has no sources yet. Add some to read them here.</p>
+  {% elif not content %}
+    <h3 class="govuk-heading-m">{{ source.name }}</h3>
+    <p class="govuk-body dlp-pd-muted">
+      There is no extract of this source in the prototype. It is a {{ source.type | lower }}
+      with the status &ldquo;{{ source.status }}&rdquo;.
+    </p>
+  {% elif content.kind == "consultation" %}
+    <h3 class="govuk-heading-m govuk-!-margin-bottom-2">{{ content.title }}</h3>
+    <p class="govuk-body dlp-pd-muted dlp-pd-viewer__section">{{ content.section }} &mdash; {{ content.total }} total responses received</p>
+
+    <h4 class="govuk-heading-s">Summary</h4>
+    <p class="govuk-body-s">{{ content.summary }}</p>
+
+    <h4 class="govuk-heading-s govuk-!-margin-top-6">Top themes</h4>
+    <ul class="govuk-list dlp-pd-themes">
+      {% for theme in content.themes %}
+        <li class="dlp-pd-themes__item">
+          <div class="dlp-pd-themes__row">
+            <span class="govuk-!-font-weight-bold">{{ theme.name }}</span>
+            <span class="govuk-!-font-weight-bold" aria-hidden="true">{{ theme.count }}/{{ content.total }}</span>
+          </div>
+          <div class="dlp-pd-themes__bar" aria-hidden="true"><span style="width: {{ theme.percent }}%"></span></div>
+          <p class="govuk-body-s dlp-pd-muted govuk-!-margin-0">{{ theme.count }} of {{ content.total }} respondents raised this theme</p>
+        </li>
+      {% endfor %}
+    </ul>
+    {# Placeholder from the design — does nothing yet. #}
+    <p class="govuk-body"><button type="button" class="dlp-link-button">View in consultation panel</button></p>
+  {% else %}
+    <h3 class="govuk-heading-m govuk-!-margin-bottom-2">{{ content.title }}</h3>
+    <p class="govuk-body dlp-pd-muted dlp-pd-viewer__section">{{ content.section }}</p>
+    {% for block in content.blocks %}
+      {% if block.heading %}
+        <h4 class="govuk-heading-s dlp-pd-viewer__heading">{{ block.heading }}</h4>
+      {% elif block.table %}
+        <div class="dlp-pd-viewer__table">
+          <table class="govuk-table govuk-!-font-size-16 govuk-!-margin-bottom-1">
+            <caption class="govuk-table__caption govuk-table__caption--s govuk-!-font-size-16">{{ block.table.caption }}</caption>
+            <thead class="govuk-table__head">
+              <tr class="govuk-table__row">
+                {% for cell in block.table.head %}
+                  <th scope="col" class="govuk-table__header{% if not loop.first %} govuk-table__header--numeric{% endif %}">{{ cell }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody class="govuk-table__body">
+              {% for row in block.table.rows %}
+                <tr class="govuk-table__row">
+                  {% for cell in row %}
+                    {% if loop.first %}
+                      <th scope="row" class="govuk-table__header govuk-!-font-weight-regular">{{ cell }}</th>
+                    {% else %}
+                      <td class="govuk-table__cell govuk-table__cell--numeric">{{ cell }}</td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if block.table.source %}<p class="govuk-body-s dlp-pd-muted"><em>{{ block.table.source }}</em></p>{% endif %}
+        </div>
+      {% elif block.figure %}
+        <figure class="dlp-pd-figure">
+          <div class="dlp-pd-figure__placeholder">{{ block.figure }}</div>
+          <figcaption class="govuk-body-s dlp-pd-muted"><em>{{ block.caption }}</em></figcaption>
+        </figure>
+      {% else %}
+        <p class="govuk-body-s dlp-pd-viewer__para">
+          <span class="dlp-pd-viewer__number">{{ block.number }}</span>
+          {{ block.text }}
+        </p>
+      {% endif %}
+    {% endfor %}
+    {% if content.caveat %}
+      <p class="govuk-body-s dlp-pd-muted">
+        <em>{{ content.caveat }}</em>
+        {% if content.sourceUrl %}
+          <a class="govuk-link" href="{{ content.sourceUrl }}" target="_blank" rel="noopener noreferrer">Read the full document (PDF)<span class="govuk-visually-hidden"> (opens in a new tab)</span></a>
+        {% endif %}
+      </p>
+    {% endif %}
+  {% endif %}
+{% endmacro %}
+
+{# The "Source:" picker. A plain GET form, so it works without JavaScript. #}
+{% macro evidenceSourcePicker(action, sources, selected, hiddenFields) %}
+  <form method="get" action="{{ action }}" class="dlp-pd-viewer__picker">
+    {% for name, value in hiddenFields %}
+      <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+    <label class="govuk-label govuk-!-font-weight-bold govuk-!-margin-0" for="pd-viewer-source">Source:</label>
+    <select class="govuk-select dlp-pd-viewer__select" id="pd-viewer-source" name="_source">
+      {% for source in sources %}
+        <option value="{{ source.id }}" {% if selected and source.id == selected.id %}selected{% endif %}>{{ source.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="govuk-button govuk-button--secondary govuk-!-margin-0 dlp-pd-viewer__go">View</button>
+  </form>
+{% endmacro %}

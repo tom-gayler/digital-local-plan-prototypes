@@ -1,0 +1,42 @@
+{% extends "policy-writing-drafting/partials/layout.html" %}
+
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "policy-writing-drafting/partials/chapter-breadcrumbs.html" import chapterBreadcrumbs %}
+
+{# Both "Edit" on a policy area and "+ Add policy". #}
+{% set heading = ("Edit " + policyArea.ref) if policyArea else "Add policy" %}
+{% set pageName = heading %}
+{% set policiesUrl = "/policy-writing-drafting/chapters/" + chapter.id + "/policies" %}
+
+{% block content %}
+
+{{ chapterBreadcrumbs(chapter, heading) }}
+
+<div class="dlp-pd-measure">
+  <h1 class="govuk-heading-xl">{{ heading }}</h1>
+
+  <form method="post" action="{{ policiesUrl }}/{{ (policyArea.id + '/edit') if policyArea else 'new' }}">
+    {{ govukInput({
+      label: { text: "Policy number", classes: "govuk-label--s" },
+      hint: { text: "For example HS9" if not policyArea else undefined },
+      id: "pd-policy-ref",
+      name: "_policyRef",
+      value: policyArea.ref if policyArea else "",
+      classes: "govuk-input--width-5"
+    }) }}
+
+    {{ govukInput({
+      label: { text: "Policy area name", classes: "govuk-label--s" },
+      id: "pd-policy-name",
+      name: "_policyName",
+      value: policyArea.name if policyArea else ""
+    }) }}
+
+    <div class="govuk-button-group">
+      {{ govukButton({ text: "Save changes" if policyArea else "Add policy" }) }}
+      <a class="govuk-link" href="{{ policiesUrl }}">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% endblock %}

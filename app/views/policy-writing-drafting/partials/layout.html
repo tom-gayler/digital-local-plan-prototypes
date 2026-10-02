@@ -1,0 +1,15 @@
+{#
+  Every page in this prototype after the landing page: the sidebar layout, filled with the
+  sidebar the route builds (buildDraftingSidebar in app/routes.js). Pages extend this and fill
+  in `content` as usual.
+#}
+
+{% extends "layouts/main-with-sidebar.html" %}
+
+{% from "partials/side-navigation/macro.njk" import appSideNavigation %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block sideNavigation %}
+  {{ appSideNavigation({ sections: sidebarSections, ariaLabel: "Policy drafting" }) }}
+{% endblock %}

@@ -1,0 +1,199 @@
+{#
+  The consultant's screen (Figma frame 2). They are outside the council, so this uses the
+  external layout: no sidebar, no internal nav. In the real service they'd arrive from the
+  email that sends them the brief; in the prototype, from a "Prototype only" handoff panel or
+  the landing page.
+#}
+
+{% extends "evidence/commissioned/partials/external-layout.html" %}
+
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+{% from "govuk/components/details/macro.njk" import govukDetails %}
+{% from "evidence/commissioned/partials/handoff.html" import ceHandoff %}
+
+{% set pageName = "Submit report" %}
+{% set brief = commission.brief %}
+{% set report = commission.report %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Submit report" }
+] }) }}
+
+{% if errorList.length %}
+  {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+{% endif %}
+
+<div class="dlp-ce-title-row">
+  <h1 class="govuk-heading-l govuk-!-margin-bottom-0">Submit report</h1>
+  {% if commission.status == "accepted" %}
+    {{ govukTag({ text: "Accepted", classes: "govuk-tag--green" }) }}
+  {% elif commission.stage == "submitted" %}
+    {{ govukTag({ text: "Submitted", classes: "govuk-tag--blue" }) }}
+  {% else %}
+    {{ govukTag({ text: "Draft", classes: "govuk-tag--grey" }) }}
+  {% endif %}
+</div>
+<p class="govuk-body-s dlp-ce-muted govuk-!-margin-top-1">Logged in as {{ viewer }}</p>
+
+{% if commission.stage == "not-started" %}
+
+  <p class="govuk-body">No brief has been sent to you yet.</p>
+  {{ ceHandoff({
+    text: "The officer hasn't sent a brief in this run of the prototype.",
+    linkText: "Switch to Danny Dyer (policy officer) to create a brief",
+    href: "/evidence/commissioned/create-brief"
+  }) }}
+
+{% else %}
+
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds-from-desktop dlp-ce-wide">
+
+      {{ govukSummaryList({ rows: [
+        { key: { text: "Brief title" }, value: { text: brief.title } },
+        { key: { text: "Commencement date" }, value: { text: brief.commencedOn } },
+        { key: { text: "Assigned officer" }, value: { text: brief.assignedOfficer } }
+      ] }) }}
+
+      {% set briefHtml %}
+        <p class="govuk-body">{{ brief.text | escape | nl2br }}</p>
+        {% if brief.themes.length %}
+          <p class="govuk-body govuk-!-margin-bottom-1"><strong>Themes to cover</strong></p>
+          <ul class="govuk-list govuk-list--bullet">{% for theme in brief.themes %}<li>{{ theme }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if brief.link %}
+          <p class="govuk-body"><a class="govuk-link dlp-ce-break" href="{{ brief.link }}" rel="noreferrer noopener" target="_blank">{{ brief.link }}<span class="govuk-visually-hidden"> (opens in a new tab)</span></a></p>
+        {% endif %}
+      {% endset %}
+      {{ govukDetails({ summaryText: "Read the brief", html: briefHtml }) }}
+
+      {% if notesFromCouncil.length %}
+        {% set notesHtml %}
+          <ul class="govuk-list dlp-ce-notes-list">
+            {% for note in notesFromCouncil %}
+              <li>
+                <p class="govuk-body-s dlp-ce-muted govuk-!-margin-bottom-1">{{ note.by }} · {{ note.date }}, {{ note.time }}</p>
+                <p class="govuk-body govuk-!-margin-bottom-0">{{ note.text }}</p>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endset %}
+        {{ govukDetails({ summaryText: "Notes from the council (" + notesFromCouncil.length + ")", html: notesHtml }) }}
+      {% endif %}
+
+      {% if commission.status == "accepted" %}
+
+        <div class="govuk-inset-text">
+          The council accepted this report on {{ commission.acceptedOn }}. It can no longer be changed.
+        </div>
+
+      {% else %}
+
+        <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+        <form method="post" action="/evidence/commissioned/consultant/submit-report" novalidate>
+
+          {# Pressing Enter in a text field submits the form with its first submit button.
+             Without this, that would be "Add link" rather than submitting the report. #}
+          <button type="submit" name="_action" value="submit" class="dlp-ce-default-submit" tabindex="-1" aria-hidden="true">Submit draft</button>
+
+          {{ govukInput({
+            id: "reportTitle",
+            name: "_reportTitle",
+            value: report.title or brief.title,
+            label: { text: "Report title", classes: "govuk-label--m" },
+            hint: { text: "Give your report a descriptive title" },
+            errorMessage: { text: errors.reportTitle } if errors.reportTitle
+          }) }}
+
+          <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+          <div class="govuk-form-group {%- if errors.reportContent %} govuk-form-group--error{% endif %}">
+            <h2 class="govuk-label-wrapper">
+              <label class="govuk-label govuk-label--m" for="reportContent">Report content</label>
+            </h2>
+            <div id="reportContent-hint" class="govuk-hint">Write or paste your report content below. Leave a blank line between paragraphs.</div>
+            {% if errors.reportContent %}
+              <p id="reportContent-error" class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> {{ errors.reportContent }}</p>
+            {% endif %}
+            {# Formatting toolbar from the design, inert until there is an editor behind it. #}
+            <div class="dlp-editor-toolbar dlp-ce-toolbar">
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Bold"><strong>B</strong></button>
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Italic"><em>I</em></button>
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Heading 1"><strong>H1</strong></button>
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Heading 2"><strong>H2</strong></button>
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Bulleted list">UL</button>
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Numbered list">OL</button>
+              <button type="button" class="dlp-editor-toolbar__button" aria-hidden="true" tabindex="-1" title="Image">Image</button>
+            </div>
+            <textarea class="govuk-textarea dlp-ce-report-input {%- if errors.reportContent %} govuk-textarea--error{% endif %}"
+                      id="reportContent" name="_reportContent" rows="14"
+                      placeholder="Enter your report content here…"
+                      aria-describedby="reportContent-hint{% if errors.reportContent %} reportContent-error{% endif %}">{{ reportContent }}</textarea>
+          </div>
+
+          <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+          <h2 class="govuk-heading-m govuk-!-margin-bottom-2" id="add-links">Add links</h2>
+          <p class="govuk-hint">Add links to other sources relevant to your report. You can add multiple links.</p>
+          {% if report.links.length %}
+            <ul class="govuk-list govuk-list--bullet">
+              {% for link in report.links %}<li class="dlp-ce-break">{{ link }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+          {{ govukInput({
+            id: "linkUrl",
+            name: "_linkUrl",
+            type: "url",
+            spellcheck: false,
+            label: { text: "Link URL" },
+            hint: { text: "Enter a URL to add it to your report" },
+            errorMessage: { text: errors.linkUrl } if errors.linkUrl
+          }) }}
+          {{ govukButton({ text: "Add link", classes: "govuk-button--secondary", name: "_action", value: "add-link" }) }}
+
+          <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+          <h2 class="govuk-heading-m govuk-!-margin-bottom-2">Upload files</h2>
+          <p class="govuk-hint">Upload data tables or other reference data.</p>
+          {% if report.files.length %}
+            <ul class="govuk-list govuk-list--bullet">
+              {% for file in report.files %}<li>{{ file }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+          {# The prototype keeps only the file's name — there is no storage behind it. #}
+          {{ govukFileUpload({
+            id: "file",
+            name: "_file",
+            label: { text: "Upload file" },
+            hint: { text: "Select a file to upload" }
+          }) }}
+
+          <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+          {{ govukButton({ text: "Submit revised draft" if commission.stage == "submitted" else "Submit draft", name: "_action", value: "submit" }) }}
+
+        </form>
+
+      {% endif %}
+
+      {% if commission.stage == "submitted" %}
+        {{ ceHandoff({
+          text: "You've submitted this report. To see what the council does with it, switch back to the officer.",
+          linkText: "Switch back to Danny Dyer (policy officer)",
+          href: "/evidence/commissioned/review"
+        }) }}
+      {% endif %}
+
+    </div>
+  </div>
+
+{% endif %}
+
+{% endblock %}

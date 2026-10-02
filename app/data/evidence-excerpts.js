@@ -332,22 +332,27 @@ const EVIDENCE_EXCERPTS = [
   // substance is accurate, but the wording is summarised for this prototype rather than quoted
   // — do not treat it as the text of either document, and check the source before relying on
   // any of it.
+  //
+  // The NPPF entries below cite the restructured NPPF, which replaced the old version's
+  // continuously-numbered paragraphs with named policies (e.g. "Policy S3"), each with its own
+  // numbering starting from 1 — matching how the London Plan entries alongside them already
+  // cite "Policy H1" rather than a paragraph number.
   {
-    text: 'Plans should provide for objectively assessed needs for housing and other development, with a presumption in favour of sustainable development applying unless the policies most important for determining the application provide a clear reason for refusal.',
+    text: 'Decisions on development proposals should apply a presumption in favour of sustainable development, with proposals that accord with an up-to-date development plan and the Framework’s decision-making policies approved without delay.',
     source: 'National Planning Policy Framework',
-    ref: 'Paragraph 11',
+    ref: 'Policy S3',
     policyRefs: ['S1', 'S3', 'HS1']
   },
   {
-    text: 'The minimum number of homes needed should be determined using the standard method, unless exceptional circumstances justify an alternative approach that also reflects current and future demographic trends and market signals.',
+    text: 'Spatial development strategies, and local plans where a spatial development strategy is not in place, should be based on a housing need assessment establishing the overall number of homes needed in the area as a minimum over the plan period, using the standard method.',
     source: 'National Planning Policy Framework',
-    ref: 'Paragraph 61',
+    ref: 'Policy HO1',
     policyRefs: ['S3', 'HS1']
   },
   {
-    text: 'The size, type and tenure of housing needed for different groups in the community should be assessed and reflected in planning policies, including families with children, older people and people with disabilities.',
+    text: 'The development plan should set out policies to address the housing needs of different groups, including through affordable housing requirements and identifying sites for specialist types of accommodation such as housing for older people.',
     source: 'National Planning Policy Framework',
-    ref: 'Paragraph 63',
+    ref: 'Policy HO5',
     policyRefs: ['S3', 'HS4']
   },
   {

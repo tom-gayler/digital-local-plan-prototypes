@@ -1,0 +1,75 @@
+{% extends "evidence/commissioned/partials/layout.html" %}
+
+{% from "govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+
+{% set pageName = "Accept and save" %}
+{% set accepted = commission.status == "accepted" %}
+
+{% block content %}
+
+{{ govukBreadcrumbs({ items: [
+  { text: "Home", href: "/evidence/commissioned" },
+  { text: "Accept and save" }
+] }) }}
+
+<div class="dlp-ce-title-row">
+  <h1 class="govuk-heading-l govuk-!-margin-bottom-0">Accept and save</h1>
+  {% if accepted %}
+    {{ govukTag({ text: "Accepted", classes: "govuk-tag--green" }) }}
+  {% else %}
+    {{ govukTag({ text: "Draft", classes: "govuk-tag--grey" }) }}
+  {% endif %}
+</div>
+<p class="govuk-body-s dlp-ce-muted govuk-!-margin-top-1">Logged in as {{ viewer }}</p>
+
+<form method="post" action="/evidence/commissioned/accept" class="dlp-ce-measure" novalidate>
+
+  {% if accepted %}
+    <div class="govuk-inset-text">
+      You accepted <strong>{{ commission.report.title }}</strong> on {{ commission.acceptedOn }}. It is in
+      the evidence library. You can still change its tags.
+    </div>
+  {% else %}
+    <div class="govuk-inset-text">
+      When you accept <strong>{{ commission.report.title }}</strong>, it will be available as
+      'accepted' evidence in the evidence library. A confirmation will be sent to
+      {{ commission.brief.consultant.name }}.
+    </div>
+  {% endif %}
+
+  {% set tagItems = [] %}
+  {% for theme in themes %}
+    {% set tagItems = (tagItems.push({ value: theme, text: theme, checked: theme in selectedTags }), tagItems) %}
+  {% endfor %}
+  {{ govukCheckboxes({
+    idPrefix: "tags",
+    name: "_tags",
+    classes: "govuk-checkboxes--small dlp-ce-two-columns",
+    fieldset: { legend: { text: "Edit tags", classes: "govuk-fieldset__legend--m" } },
+    hint: { text: "Add or edit themes related to this evidence. These can be changed later." },
+    items: tagItems
+  }) }}
+
+  <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--l" />
+
+  {% if accepted %}
+    {{ govukButton({ text: "Save tags" }) }}
+  {% else %}
+    <h2 class="govuk-heading-m">Accept document</h2>
+    <p class="govuk-body">This action makes the document available for policy writing and evidence review.</p>
+    {% if openCount %}
+      <div class="govuk-warning-text">
+        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+        <strong class="govuk-warning-text__text">
+          <span class="govuk-visually-hidden">Warning</span>
+          {{ openCount }} comment{{ "s are" if openCount > 1 else " is" }} still open.
+          <a class="govuk-link" href="/evidence/commissioned/review#comments">Review the comments</a>
+        </strong>
+      </div>
+    {% endif %}
+    {{ govukButton({ text: "Accept document" }) }}
+  {% endif %}
+
+</form>
+
+{% endblock %}

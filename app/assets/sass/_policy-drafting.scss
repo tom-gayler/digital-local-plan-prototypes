@@ -1,0 +1,358 @@
+// Policy drafting with starting points (/policy-writing-drafting)
+//
+// Imported after _policy-writing-v2.scss: the draft page reuses its .dlp-pw2-pane chrome and
+// the shared .dlp-split, and only adds what differs here.
+
+// Prose holds to a readable measure; tables and the draft split use the full width.
+.dlp-pd-measure {
+  max-width: 46em;
+}
+
+.dlp-pd-muted {
+  color: $dlp-muted-text;
+}
+
+.dlp-pd-prewrap {
+  white-space: pre-wrap;
+}
+
+// Remove is red in the designs, where the action takes something out of the plan.
+.dlp-pd-remove {
+  color: $govuk-error-colour;
+
+  &:hover {
+    color: govuk-shade($govuk-error-colour, 20%);
+  }
+}
+
+.dlp-pd-short-rule {
+  max-width: 18em;
+  margin-left: 0;
+}
+
+// Holds a page to the standard GOV.UK page width (960px), which the full-bleed sidebar layout
+// otherwise lets run the width of a wide monitor.
+.dlp-pd-page-width {
+  max-width: $govuk-page-width;
+}
+
+// --- Tables --------------------------------------------------------------------------------
+
+.dlp-pd-table {
+  margin-bottom: govuk-spacing(6);
+
+  .govuk-table__cell,
+  .govuk-table__header {
+    vertical-align: middle;
+  }
+}
+
+.dlp-pd-table--compact {
+  max-width: 45em;
+}
+
+.dlp-pd-table--people {
+  max-width: 45em;
+}
+
+.dlp-pd-table__head--shaded .govuk-table__header {
+  background: $dlp-panel-background;
+  padding-left: govuk-spacing(2);
+  padding-right: govuk-spacing(2);
+}
+
+.dlp-pd-table__head--shaded ~ .govuk-table__body .govuk-table__cell {
+  padding-left: govuk-spacing(2);
+  padding-right: govuk-spacing(2);
+}
+
+.dlp-pd-table--boxed {
+  border: 1px solid $dlp-border-grey;
+
+  .govuk-checkboxes {
+    margin: 0;
+  }
+
+  .govuk-checkboxes__item {
+    margin: 0;
+  }
+}
+
+// --- A form with a side panel (brief, explanatory text) --------------------------------------
+
+.dlp-pd-with-panel {
+  @include govuk-media-query($from: desktop) {
+    align-items: start;
+    display: grid;
+    gap: govuk-spacing(6);
+    grid-template-columns: minmax(0, 36em) minmax(16em, 24em);
+  }
+}
+
+.dlp-pd-panel {
+  background: $dlp-panel-background;
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(4);
+}
+
+.dlp-pd-panel__hint {
+  color: $dlp-muted-text;
+}
+
+.dlp-pd-requirement {
+  margin-bottom: govuk-spacing(3);
+}
+
+.dlp-pd-requirement__summary {
+  @include govuk-font($size: 16);
+  cursor: pointer;
+  display: flex;
+  gap: govuk-spacing(3);
+  justify-content: space-between;
+  list-style: none;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:focus {
+    @include govuk-focused-text;
+  }
+}
+
+.dlp-pd-requirement__toggle {
+  flex-shrink: 0;
+  text-decoration: underline;
+}
+
+.dlp-pd-requirement[open] .dlp-pd-requirement__toggle {
+  visibility: hidden;
+}
+
+.dlp-pd-requirement__text {
+  border-left: 4px solid $dlp-border-grey;
+  margin: govuk-spacing(2) 0 0;
+  padding-left: govuk-spacing(3);
+}
+
+// A select with its button beside it (officers, policy area).
+.dlp-pd-inline-field {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 govuk-spacing(3);
+
+  .govuk-form-group,
+  .govuk-button {
+    margin-bottom: govuk-spacing(4);
+  }
+}
+
+// --- Add sources -----------------------------------------------------------------------------
+
+.dlp-pd-search {
+  max-width: 36em;
+}
+
+// The suggestion list floats over the content below rather than pushing the filters down as
+// the user types. Reuses the .dlp-typeahead look from the evidence search.
+.dlp-suggest {
+  position: relative;
+}
+
+.dlp-suggest__list {
+  background: govuk-colour("white");
+  border: 2px solid govuk-colour("black");
+  border-top: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 10;
+}
+
+.dlp-suggest__option {
+  cursor: pointer;
+}
+
+.dlp-suggest__option--active,
+.dlp-suggest__option:hover {
+  background: govuk-colour("blue");
+  color: govuk-colour("white");
+
+  .dlp-typeahead__kind {
+    color: govuk-colour("white");
+  }
+}
+
+.dlp-pd-filters {
+  display: grid;
+  gap: 0 govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include govuk-media-query($from: desktop) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.dlp-pd-filter__select {
+  width: 100%;
+}
+
+.dlp-pd-results__select {
+  width: 2.5rem;
+
+  .govuk-checkboxes,
+  .govuk-checkboxes__item {
+    margin: 0;
+  }
+}
+
+.dlp-pd-results__row--added {
+  color: $dlp-muted-text;
+}
+
+.dlp-pd-results-footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(6);
+}
+
+// --- Draft policy and the evidence viewer ----------------------------------------------------
+
+.dlp-pd-split {
+  margin-top: govuk-spacing(6);
+}
+
+.dlp-pd-pane .govuk-textarea,
+.dlp-pd-pane .govuk-input {
+  width: 100%;
+}
+
+.dlp-pd-viewer__picker {
+  align-items: center;
+  border-bottom: 1px solid $dlp-border-grey;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(3);
+}
+
+.dlp-pd-viewer__select {
+  flex: 1 1 12em;
+  min-width: 0;
+}
+
+.dlp-pd-viewer__section {
+  border-bottom: 1px solid $dlp-border-grey;
+  padding-bottom: govuk-spacing(3);
+}
+
+.dlp-pd-viewer__para {
+  display: flex;
+  gap: govuk-spacing(2);
+}
+
+.dlp-pd-viewer__number {
+  flex: 0 0 2.5em;
+}
+
+.dlp-pd-viewer__heading {
+  margin-top: govuk-spacing(5);
+}
+
+// Tables in an extract scroll sideways rather than widening the pane when it is narrow.
+.dlp-pd-viewer__table {
+  margin-bottom: govuk-spacing(4);
+  overflow-x: auto;
+}
+
+.dlp-pd-figure {
+  margin: 0 0 govuk-spacing(4);
+}
+
+.dlp-pd-figure__placeholder {
+  @include govuk-font($size: 16);
+  align-items: center;
+  background: govuk-colour("blue", $variant: "tint-95");
+  border: 1px solid $dlp-border-grey;
+  color: $dlp-muted-text;
+  display: flex;
+  justify-content: center;
+  margin-bottom: govuk-spacing(2);
+  min-height: 9em;
+  padding: govuk-spacing(3);
+  text-align: center;
+}
+
+.dlp-pd-themes__item {
+  border-bottom: 1px solid $dlp-border-grey;
+  margin-bottom: govuk-spacing(3);
+  padding-bottom: govuk-spacing(3);
+}
+
+.dlp-pd-themes__row {
+  @include govuk-font($size: 16);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(1);
+}
+
+.dlp-pd-themes__bar {
+  background: $dlp-border-grey;
+  height: 6px;
+  margin-bottom: govuk-spacing(2);
+
+  span {
+    background: govuk-colour("blue");
+    display: block;
+    height: 100%;
+  }
+}
+
+// The design's formatting toolbar, sitting on top of the policy detail box.
+.dlp-pd-toolbar {
+  justify-content: flex-end;
+}
+
+.dlp-pd-toolbar .dlp-editor-toolbar__button {
+  align-items: center;
+  background: $dlp-panel-background;
+  border-radius: 3px;
+  color: govuk-colour("black");
+  display: inline-flex;
+  height: 1.75rem;
+  justify-content: center;
+  min-width: 1.75rem;
+}
+
+// --- View and export -----------------------------------------------------------------------
+
+.dlp-pd-radio-with-select {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+
+  .govuk-select {
+    margin-left: govuk-spacing(2);
+  }
+}
+
+// The audit log column. The timeline itself is the shared partials/timeline component.
+.dlp-pd-audit {
+  border-top: 5px solid govuk-colour("blue");
+  padding-top: govuk-spacing(3);
+}
+
+.dlp-pd-preview-policy {
+  border-top: 1px solid $dlp-border-grey;
+  padding-top: govuk-spacing(4);
+}

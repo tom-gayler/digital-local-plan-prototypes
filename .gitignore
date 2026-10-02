@@ -9,3 +9,7 @@ migrate.log
 # General ignores
 .DS_Store
 .idea
+
+# Local Figma exports - not committed
+design-refs/
+Figma screenshots/
