@@ -1,0 +1,272 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% from "consultations/managing-responses/partials/macros.html" import crTabs, crSelect, crTag %}
+
+{% set pageName = "Check and send for review" %}
+{% set base = "/consultations/managing-responses/check" %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "Check and send for review" }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl govuk-!-margin-bottom-4">Check and send for review</h1>
+
+<p class="govuk-body dlp-cr-measure">
+  Check consultation responses are complete and ready, make any final edits, then send them to the
+  Planning Policy review team.
+</p>
+
+{{ crTabs("View responses", [
+  { text: "Responses", href: base, active: not byTheme },
+  { text: "Responses by theme", href: base + "?_view=themes", active: byTheme }
+]) }}
+
+<div class="dlp-cr-section-head">
+  <h2 class="govuk-heading-l govuk-!-margin-bottom-0">Review readiness</h2>
+  <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">Last updated {{ lastUpdated }}</p>
+</div>
+
+<ul class="dlp-cr-tiles">
+  <li class="dlp-cr-tile">
+    <p class="dlp-cr-tile__number dlp-cr-tile__number--blue">{{ readiness.total }}</p>
+    <p class="dlp-cr-tile__label">Total responses</p>
+    <p class="dlp-cr-tile__meta">{{ themeCount }} themes · {{ readiness.inReview }} already in review</p>
+  </li>
+  <li class="dlp-cr-tile">
+    <p class="dlp-cr-tile__number dlp-cr-tile__number--green">{{ readiness.ready }}</p>
+    <p class="dlp-cr-tile__label">Ready for review</p>
+    <p class="dlp-cr-tile__meta">{{ readiness.percent }}% complete, including those in review</p>
+  </li>
+  <li class="dlp-cr-tile">
+    <p class="dlp-cr-tile__number dlp-cr-tile__number--orange">{{ readiness.changes }}</p>
+    <p class="dlp-cr-tile__label">Needs changes</p>
+    <p class="dlp-cr-tile__meta">Returned to officers</p>
+  </li>
+  <li class="dlp-cr-tile">
+    <p class="dlp-cr-tile__number dlp-cr-tile__number--red">{{ readiness.incomplete }}</p>
+    <p class="dlp-cr-tile__label">Incomplete drafts</p>
+    <p class="dlp-cr-tile__meta">Must be completed</p>
+  </li>
+</ul>
+
+<div class="dlp-cr-progress">
+  <div class="dlp-cr-progress__labels">
+    <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-1">{{ readiness.done }} of {{ readiness.total }} responses ready or in review</p>
+    <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-1 dlp-cr-green">{{ readiness.percent }}%</p>
+  </div>
+  <div class="dlp-cr-progress__track" aria-hidden="true">
+    <div class="dlp-cr-progress__bar" style="width: {{ readiness.percent }}%"></div>
+  </div>
+</div>
+
+{% if byTheme %}
+
+  <table class="govuk-table govuk-!-margin-top-6">
+    <caption class="govuk-table__caption govuk-table__caption--m">Responses by theme</caption>
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header">Theme</th>
+        <th scope="col" class="govuk-table__header govuk-table__header--numeric">Responses</th>
+        <th scope="col" class="govuk-table__header govuk-table__header--numeric">Ready</th>
+        <th scope="col" class="govuk-table__header govuk-table__header--numeric">Needs changes</th>
+        <th scope="col" class="govuk-table__header govuk-table__header--numeric">Incomplete</th>
+        <th scope="col" class="govuk-table__header govuk-table__header--numeric">In review</th>
+        <th scope="col" class="govuk-table__header"><span class="govuk-visually-hidden">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for row in themeRows %}
+        <tr class="govuk-table__row">
+          <th scope="row" class="govuk-table__header">{{ row.theme.title }}</th>
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.total }}</td>
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.ready }}</td>
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.changes }}</td>
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.incomplete }}</td>
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.inReview }}</td>
+          <td class="govuk-table__cell dlp-cr-nowrap">
+            <a class="govuk-link govuk-link--no-visited-state" href="{{ base }}?crcTheme={{ row.theme.id }}#responses">View responses<span class="govuk-visually-hidden"> for {{ row.theme.title | lower }}</span></a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+{% else %}
+
+  {#
+    The filters are the kit's sticky crc* query fields, so they hold as the officer goes off to
+    edit a response and comes back.
+  #}
+  {% set statusOptions = [] %}
+  {% for status in statuses %}{% set statusOptions = statusOptions.concat([{ value: status.value, text: status.text }]) %}{% endfor %}
+  <form method="get" action="{{ base }}" class="dlp-cr-filters" novalidate>
+    <div class="dlp-cr-filters__head">
+      <h2 class="govuk-heading-m govuk-!-margin-bottom-0">Filter responses</h2>
+      <a class="govuk-link govuk-link--no-visited-state govuk-body-s govuk-!-margin-bottom-0" href="{{ base }}?crcSearch=&amp;crcTheme=&amp;crcPolicy=&amp;crcRespondentType=&amp;crcCommentType=&amp;crcStatus=&amp;crcReview=">Clear filters</a>
+    </div>
+    <div class="govuk-form-group">
+      <label class="govuk-label govuk-!-font-weight-bold" for="crc-search">Search responses</label>
+      <input class="govuk-input" id="crc-search" name="crcSearch" type="search" value="{{ filters.search }}" placeholder="Search by respondent, reference or response text">
+    </div>
+    <div class="dlp-cr-filters__grid dlp-cr-filters__grid--three">
+      {{ crSelect("crc-theme", "crcTheme", "Theme", options.themes, filters.theme, "All themes") }}
+      {{ crSelect("crc-policy", "crcPolicy", "Policy title", options.policies, filters.policy, "All policy titles") }}
+      {{ crSelect("crc-respondent-type", "crcRespondentType", "Respondent type", options.respondentTypes, filters.respondentType, "All respondent types") }}
+      {{ crSelect("crc-comment-type", "crcCommentType", "Comment type", options.commentTypes, filters.commentType, "Support, objection or neutral") }}
+      {{ crSelect("crc-status", "crcStatus", "Response status", statusOptions, filters.status, "All response statuses") }}
+      {{ crSelect("crc-review", "crcReview", "Review status", reviewStatuses, filters.review, "All review statuses") }}
+    </div>
+    <div class="dlp-cr-filters__actions">
+      <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-module="govuk-button">Apply filters</button>
+      <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">Showing {{ resultCount }} of {{ readiness.total }} responses</p>
+    </div>
+  </form>
+
+  <div class="dlp-cr-section-head govuk-!-margin-top-8" id="responses">
+    <div>
+      <h2 class="govuk-heading-l govuk-!-margin-bottom-1">Consultation responses</h2>
+      <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">{{ resultCount }} response{% if resultCount != 1 %}s match{% else %} matches{% endif %} the selected filters</p>
+    </div>
+    <form method="get" action="{{ base }}#responses" class="dlp-cr-sort" data-dlp-autosubmit novalidate>
+      <label class="govuk-label govuk-!-font-weight-bold govuk-!-margin-bottom-0" for="crc-sort">Sort by</label>
+      <select class="govuk-select" id="crc-sort" name="crcSort">
+        {% for sort in sorts %}
+          <option value="{{ sort.value }}" {%- if sort.value == filters.sort %} selected{% endif %}>{{ sort.text }}</option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0">Sort</button></noscript>
+    </form>
+  </div>
+
+  {% if results | length %}
+    {#
+      data-dlp-select-all wires up the header checkbox, the running count and the disabled state
+      of "Mark ready for review" (initSelectAll). Responses already with the reviewers have no
+      checkbox: there's nothing left to mark.
+    #}
+    <form method="post" action="{{ base }}/mark-ready" data-dlp-select-all novalidate>
+      <input type="hidden" name="_page" value="{{ page }}">
+
+      <div class="dlp-cr-selection">
+        <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-0" role="status" aria-live="polite" data-dlp-select-all-count>Tick responses to mark them ready</p>
+        <button type="submit" class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0" data-module="govuk-button" data-dlp-select-all-submit>Mark ready for review</button>
+        <button type="reset" class="dlp-cr-link-button">Clear selection</button>
+      </div>
+
+      <table class="govuk-table dlp-cr-check-table">
+        <caption class="govuk-table__caption govuk-visually-hidden">Consultation responses</caption>
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header dlp-cr-check-table__select">
+              <div class="govuk-checkboxes govuk-checkboxes--small" hidden data-dlp-select-all-control>
+                <div class="govuk-checkboxes__item">
+                  <input class="govuk-checkboxes__input" id="crc-select-all" type="checkbox" data-dlp-select-all-toggle>
+                  <label class="govuk-label govuk-checkboxes__label" for="crc-select-all">
+                    <span class="govuk-visually-hidden">Select all responses on this page</span>
+                  </label>
+                </div>
+              </div>
+              <span class="govuk-visually-hidden" data-dlp-select-all-fallback>Select</span>
+            </th>
+            <th scope="col" class="govuk-table__header">Respondent and comment</th>
+            <th scope="col" class="govuk-table__header">Policy</th>
+            <th scope="col" class="govuk-table__header">Assigned officer</th>
+            <th scope="col" class="govuk-table__header">Response status</th>
+            <th scope="col" class="govuk-table__header">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for rep in results %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell dlp-cr-check-table__select">
+                {% if rep.status != "in-review" %}
+                  <div class="govuk-checkboxes govuk-checkboxes--small">
+                    <div class="govuk-checkboxes__item">
+                      <input class="govuk-checkboxes__input" id="crc-rep-{{ rep.id }}" name="_repIds" type="checkbox" value="{{ rep.id }}" data-dlp-select-all-item>
+                      <label class="govuk-label govuk-checkboxes__label" for="crc-rep-{{ rep.id }}">
+                        <span class="govuk-visually-hidden">Select {{ rep.id }} from {{ rep.consulteeName }}</span>
+                      </label>
+                    </div>
+                  </div>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell">
+                <a class="govuk-link govuk-!-font-weight-bold" href="/consultations/managing-responses/consultees/{{ rep.consulteeId }}">{{ rep.consulteeName }}</a>
+                <span class="govuk-body-s dlp-cr-muted dlp-cr-block">{{ rep.respondentType }} · {{ rep.id }}</span>
+                {{ crTag(rep.commentType, rep.commentColour, "govuk-!-margin-top-1") }}
+              </td>
+              <td class="govuk-table__cell">
+                <span class="govuk-body-s dlp-cr-block govuk-!-margin-bottom-0">{{ rep.policyRef }}</span>
+                <span class="govuk-!-font-weight-bold govuk-body-s">{{ rep.policyTitle }}</span>
+              </td>
+              <td class="govuk-table__cell govuk-body-s">
+                {% if rep.officer %}{{ rep.officer }}{% else %}<span class="dlp-cr-red">Unassigned</span>{% endif %}
+                <span class="dlp-cr-muted dlp-cr-block">Updated {{ crDate(rep.updated) }}</span>
+              </td>
+              <td class="govuk-table__cell">
+                {{ crTag(rep.statusLabel, rep.statusColour) }}
+                {% if rep.missingNote and rep.status != "in-review" %}
+                  <span class="govuk-body-s dlp-cr-red dlp-cr-block govuk-!-margin-top-1">{{ rep.missingNote }}</span>
+                {% endif %}
+              </td>
+              <td class="govuk-table__cell govuk-body-s">
+                <a class="govuk-link govuk-link--no-visited-state dlp-cr-block" href="/consultations/managing-responses/officer?_rep={{ rep.id }}&amp;crTheme={{ rep.themeId }}&amp;crPolicy={{ rep.policyRef }}&amp;crRespondentType=&amp;crCommentType=">
+                  {{ "Edit response" if rep.hasResponse else "Write response" }}<span class="govuk-visually-hidden"> to {{ rep.id }}</span>
+                </a>
+                <a class="govuk-link govuk-link--no-visited-state dlp-cr-block" href="/consultations/managing-responses/consultees/{{ rep.consulteeId }}?_view=responses#assigned-{{ rep.id }}">
+                  Review details<span class="govuk-visually-hidden"> of {{ rep.id }}</span>
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </form>
+
+    {% if pageCount > 1 %}
+      {% set pageItems = [] %}
+      {% for number in range(1, pageCount + 1) %}
+        {% if number == 1 or number == pageCount or (number >= page - 1 and number <= page + 1) %}
+          {% set pageItems = pageItems.concat([{ number: number, href: "?_page=" + number + "#responses", current: number == page }]) %}
+        {% elif number == page - 2 or number == page + 2 %}
+          {% set pageItems = pageItems.concat([{ ellipsis: true }]) %}
+        {% endif %}
+      {% endfor %}
+      {{ govukPagination({
+        previous: { href: "?_page=" + (page - 1) + "#responses" } if page > 1 else undefined,
+        next: { href: "?_page=" + (page + 1) + "#responses" } if page < pageCount else undefined,
+        items: pageItems,
+        classes: "dlp-cr-pagination"
+      }) }}
+    {% endif %}
+  {% else %}
+    <p class="govuk-body">No responses match these filters.</p>
+  {% endif %}
+
+{% endif %}
+
+<section class="dlp-cr-send" aria-labelledby="send-heading">
+  <h2 class="govuk-heading-m" id="send-heading">Send ready responses for review</h2>
+  {% if readiness.outstanding %}
+    <div class="dlp-cr-warning">
+      <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">
+        {{ readiness.outstanding }} response{% if readiness.outstanding != 1 %}s have{% else %} has{% endif %} outstanding issues and will not be sent
+      </p>
+      <p class="govuk-body-s govuk-!-margin-bottom-1">
+        Resolve missing officer assignments, incomplete draft responses and requested changes before sending them for review.
+      </p>
+      <a class="govuk-link govuk-body-s" href="{{ base }}?crcSearch=&amp;crcTheme=&amp;crcPolicy=&amp;crcRespondentType=&amp;crcCommentType=&amp;crcReview=&amp;crcStatus=outstanding#responses">View the {{ readiness.outstanding }} outstanding response{% if readiness.outstanding != 1 %}s{% endif %}</a>
+    </div>
+  {% endif %}
+  <form method="post" action="{{ base }}/send" class="dlp-cr-send__row" novalidate>
+    <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-module="govuk-button" {%- if not readiness.ready %} disabled aria-disabled="true"{% endif %}>
+      Send {{ readiness.ready }} ready response{% if readiness.ready != 1 %}s{% endif %} for review
+    </button>
+    <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">Reviewers will be notified. Responses already in review are not included.</p>
+  </form>
+</section>
+
+{% endblock %}

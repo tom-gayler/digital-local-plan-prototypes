@@ -1,0 +1,51 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% from "consultations/managing-responses/partials/macros.html" import crTabs %}
+
+{% set pageName = "View and respond by theme" %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "View and respond" }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl">View and respond</h1>
+
+<p class="govuk-body dlp-cr-measure">
+  View consultation responses and draft your replies. You can browse by consultee to see all
+  responses from a specific organisation or individual, or browse by theme to see all responses
+  grouped by topic.
+</p>
+
+{{ crTabs("View responses", [
+  { text: "By consultee", href: "/consultations/managing-responses/view" },
+  { text: "By theme", href: "/consultations/managing-responses/view/themes", active: true }
+]) }}
+
+<table class="govuk-table">
+  <caption class="govuk-table__caption govuk-visually-hidden">Themes</caption>
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header dlp-cr-col-theme">Theme</th>
+      <th scope="col" class="govuk-table__header">Respondents</th>
+      <th scope="col" class="govuk-table__header">Summary</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for theme in themes %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">
+          <a class="govuk-link" href="/consultations/managing-responses/themes/{{ theme.id }}">{{ theme.title }}</a>
+        </td>
+        <td class="govuk-table__cell govuk-!-font-weight-bold dlp-cr-nowrap">
+          {{ theme.respondents }}/{{ totalRespondents }}
+        </td>
+        <td class="govuk-table__cell">{{ theme.summary }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

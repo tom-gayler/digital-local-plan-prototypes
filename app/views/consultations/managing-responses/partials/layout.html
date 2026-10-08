@@ -1,0 +1,41 @@
+{#
+  Every officer page in Managing consultation responses: the sidebar layout with the shared side
+  navigation (built by buildCrSidebar in app/routes.js, so status icons match the other
+  prototypes), and the current consultation underneath it. Pages extend this and fill in
+  `content` as usual.
+#}
+
+{% extends "layouts/main-with-sidebar.html" %}
+
+{% from "partials/side-navigation/macro.njk" import appSideNavigation %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "govuk/components/pagination/macro.njk" import govukPagination %}
+{% from "consultations/managing-responses/partials/macros.html" import crConsultationCard %}
+
+{% block sideNavigation %}
+  <div class="dlp-cr-sidebar">
+    {{ appSideNavigation({ title: "Manage consultation responses", sections: sidebarSections, ariaLabel: "Consultation response tasks" }) }}
+    <div class="dlp-cr-sidebar-panels">
+      {{ crConsultationCard(consultation) }}
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div class="dlp-cr-page">
+    {{ govukBreadcrumbs({ items: breadcrumbs, classes: "govuk-!-margin-top-0" }) }}
+
+    {% if errorList | length %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+    {% endif %}
+
+    {% if flash %}
+      {{ govukNotificationBanner({ type: "success", text: flash }) }}
+    {% endif %}
+
+    {% block pageContent %}{% endblock %}
+  </div>
+{% endblock %}

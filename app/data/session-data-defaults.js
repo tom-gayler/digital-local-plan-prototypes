@@ -1,3 +1,5 @@
+const { startingState: startingConsultationResponses } = require('./consultation-responses.js')
+
 module.exports = {
 
   evidenceItems: [
@@ -672,6 +674,17 @@ module.exports = {
     ],
     tags: [],
     acceptedOn: null
-  }
+  },
+
+  // Managing consultation responses. Read only through getConsultationResponses in routes.js.
+  // The content itself is static (app/data/consultation-responses.js); this is only what an
+  // officer can change: uploads, templates, and each representation's officer, status and
+  // response.
+  consultationResponses: startingConsultationResponses(),
+
+  // The side-by-side views open filtered to the worked example in the designs. These are the
+  // sticky filters the kit stores from the query string, so a tester's own choice replaces them.
+  crTheme: 'heritage',
+  crPolicy: 'HE1'
 
 }

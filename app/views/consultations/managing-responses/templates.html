@@ -1,0 +1,66 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% set pageName = "Manage response templates" %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "Manage response templates" }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl">Manage response templates</h1>
+
+<p class="govuk-body-l dlp-cr-measure">
+  Standard responses are created when you respond to a theme in the View and respond section. You
+  can review, edit or assign responses to consultees from here. When you edit a response it will
+  change for all assigned responses.
+</p>
+
+{% if rows | length %}
+  <table class="govuk-table">
+    <caption class="govuk-table__caption govuk-visually-hidden">Standard responses</caption>
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header dlp-cr-col-theme">Theme</th>
+        <th scope="col" class="govuk-table__header">Response preview</th>
+        <th scope="col" class="govuk-table__header">Status</th>
+        <th scope="col" class="govuk-table__header">Assigned to</th>
+        <th scope="col" class="govuk-table__header"><span class="govuk-visually-hidden">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for row in rows %}
+        {% set isFinal = row.template.status == "final" %}
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell">
+            <a class="govuk-link" href="/consultations/managing-responses/themes/{{ row.theme.id }}">{{ row.theme.title }}</a>
+          </td>
+          <td class="govuk-table__cell dlp-cr-muted">{{ row.template.text | truncate(70, true, "…") }}</td>
+          <td class="govuk-table__cell">
+            <strong class="dlp-cr-status {{ 'dlp-cr-status--green' if isFinal else 'dlp-cr-status--orange' }}">{{ "Final" if isFinal else "Draft" }}</strong>
+          </td>
+          <td class="govuk-table__cell dlp-cr-nowrap">{{ row.assigned }}/{{ row.consultees }} consultees</td>
+          <td class="govuk-table__cell dlp-cr-nowrap">
+            <a class="govuk-link govuk-link--no-visited-state" href="/consultations/managing-responses/themes/{{ row.theme.id }}#standard-response">
+              {{ "View response" if isFinal else "Edit response" }}<span class="govuk-visually-hidden"> for {{ row.theme.title | lower }}</span>
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endif %}
+
+<p class="govuk-body">
+  {{ rows | length }} of {{ rows | length + missing | length }} themes have a standard response.
+  {% if missing | length %}
+    {{ missing | length }} theme{% if missing | length != 1 %}s have{% else %} has{% endif %} no response yet:
+    {% for theme in missing -%}
+      <a class="govuk-link" href="/consultations/managing-responses/themes/{{ theme.id }}#standard-response">{{ theme.title }}</a>
+      {%- if not loop.last %}{{ " and " if loop.revindex == 2 else ", " }}{% else %}.{% endif %}
+    {% endfor %}
+  {% endif %}
+</p>
+
+{% endblock %}

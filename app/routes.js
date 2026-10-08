@@ -27,6 +27,10 @@ router.use((req, res, next) => {
     res.locals.activeSection = 'user-stories'
   } else if (req.path.startsWith('/statement-of-compliance')) {
     res.locals.activeSection = 'statement-of-compliance'
+  } else if (req.path.startsWith('/consultations')) {
+    // Includes the inspector's screen, which overrides the header block to leave this nav out
+    // (see consultations/managing-responses/partials/inspector-layout.html).
+    res.locals.activeSection = 'consultations'
   } else if (req.path.startsWith('/pins-view')) {
     // Only the PINS hub page. The prototypes it links to are seen by inspectors, so they keep
     // their own external header with no internal nav (see partials/external-header).
@@ -2850,4 +2854,687 @@ router.get(PD + '/preview', (req, res) => {
   const scope = ['policy', 'chapter', 'plan'].includes(req.query._scope) ? req.query._scope : 'plan'
   res.render('policy-writing-drafting/preview',
     buildDraftContent(data, scope, req.query._chapter, req.query._policy))
+})
+
+// --- Managing consultation responses ---
+//
+// An officer imports a consultation's representations, responds to them — in bulk by theme, or
+// one by one — and sends the finished responses for review:
+//   /consultations/managing-responses                  - landing page, one link per pathway
+//   .../import                                          - upload a CSV (only the name is kept)
+//   .../view, .../view/themes                           - View and respond, by consultee or theme
+//   .../themes/:crThemeId                               - a theme, and its standard response
+//   .../consultees/:crConsulteeId                       - a consultee's representations over time
+//   .../templates                                       - every standard response
+//   .../check                                           - filter, mark ready and send for review
+//   .../review                                          - placeholder: no design yet
+// The alternative pathway compares a representation with the same respondent's earlier one:
+//   .../officer                                         - the policy officer drafts a response
+//   .../inspector                                       - the inspector comments (external user)
+//
+// Representations themselves are static (app/data/consultation-responses.js). Session data holds
+// only what changes, in one object read through getConsultationResponses: uploads, the standard
+// response for each theme, and each representation's officer, status and response. A response is
+// either { templateId } — so editing a standard response changes every representation it's
+// assigned to, as the templates page promises — or { text } written for that one representation.
+
+const CR = '/consultations/managing-responses'
+const CONSULTATION_RESPONSES_SCHEMA_VERSION = 2
+const CR_PAGE_SIZE = 10
+const CR_SIDE_BY_SIDE_PAGE_SIZE = 4
+
+const {
+  CURRENT_CONSULTATION: CR_CONSULTATION,
+  CONSULTATIONS: CR_CONSULTATIONS,
+  TOTAL_RESPONDENTS: CR_TOTAL_RESPONDENTS,
+  CURRENT_OFFICER: CR_OFFICER,
+  INSPECTOR: CR_INSPECTOR,
+  RESPONDENT_TYPES: CR_RESPONDENT_TYPES,
+  COMMENT_TYPES: CR_COMMENT_TYPES,
+  POLICIES: CR_POLICIES,
+  THEMES: CR_THEMES,
+  CONSULTEES: CR_CONSULTEES,
+  getTheme: getCrTheme,
+  getConsultee: getCrConsultee,
+  getRepresentations: getCrRepresentations,
+  getRepresentation: getCrRepresentation,
+  consulteeDocument: crConsulteeDocument,
+  startingState: crStartingState
+} = require('./data/consultation-responses.js')
+
+function getConsultationResponses (req) {
+  if (req.session.data.consultationResponsesSchemaVersion !== CONSULTATION_RESPONSES_SCHEMA_VERSION) {
+    req.session.data.consultationResponses = JSON.parse(JSON.stringify(sessionDataDefaults.consultationResponses))
+    req.session.data.consultationResponsesOwned = true
+    req.session.data.consultationResponsesSchemaVersion = CONSULTATION_RESPONSES_SCHEMA_VERSION
+  }
+  if (!req.session.data.consultationResponsesOwned) {
+    req.session.data.consultationResponses = JSON.parse(JSON.stringify(req.session.data.consultationResponses))
+    req.session.data.consultationResponsesOwned = true
+  }
+  return req.session.data.consultationResponses
+}
+
+const CR_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const CR_LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+  'September', 'October', 'November', 'December']
+
+// '2026-03-18' -> '18 Mar 2026', or '18 March 2026' with long.
+function crDate (iso, long) {
+  if (!iso) return ''
+  const [year, month, day] = iso.split('-').map(Number)
+  return day + ' ' + (long ? CR_LONG_MONTHS : CR_MONTHS)[month - 1] + ' ' + year
+}
+
+function crToday () {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' })
+}
+
+function crText (value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function crPick (value, allowed) {
+  return allowed.includes(value) ? value : ''
+}
+
+function crPageNumber (value, pageCount) {
+  const page = parseInt(value, 10)
+  if (!page || page < 1) return 1
+  return Math.min(page, Math.max(pageCount, 1))
+}
+
+// Messages and errors survive the redirect in session data and are cleared once shown.
+function crFlash (req, text) {
+  req.session.data.consultationResponsesFlash = text
+}
+
+function crSetErrors (req, errors, values) {
+  req.session.data.consultationResponsesErrors = { errors, values: values || {} }
+}
+
+function crTake (req, key) {
+  const value = req.session.data[key]
+  delete req.session.data[key]
+  return value
+}
+
+// How a response status reads on screen. A representation with no response yet is a draft
+// with a note saying what's missing, as in the check-and-send design.
+const CR_STATUS = {
+  draft: { label: 'Draft', colour: 'grey' },
+  ready: { label: 'Ready for review', colour: 'green' },
+  changes: { label: 'Needs changes', colour: 'orange' },
+  'in-review': { label: 'In review', colour: 'blue' }
+}
+
+const CR_COMMENT_COLOURS = { Support: 'green', Objection: 'red', Neutral: 'blue' }
+
+// One representation, static content and session state together, ready to render.
+function crRepView (data, rep) {
+  const state = data.reps[rep.id]
+  const template = state.response && state.response.templateId ? data.templates[state.response.templateId] : null
+  let responseText = ''
+  if (template) responseText = template.text
+  else if (state.response && state.response.text) responseText = state.response.text
+  const hasResponse = Boolean(responseText)
+
+  const missing = []
+  if (!state.officer) missing.push('Officer')
+  if (!hasResponse) missing.push('response')
+  let missingNote = ''
+  if (missing.length === 2) missingNote = 'Officer and response required'
+  else if (missing.length) missingNote = missing[0].charAt(0).toUpperCase() + missing[0].slice(1) + ' required'
+
+  const status = hasResponse ? state.status : 'draft'
+  return Object.assign({}, rep, {
+    officer: state.officer,
+    status,
+    statusLabel: CR_STATUS[status].label,
+    statusColour: CR_STATUS[status].colour,
+    commentColour: CR_COMMENT_COLOURS[rep.commentType],
+    hasResponse,
+    responseText,
+    responseSource: template ? 'template' : (hasResponse ? 'own' : null),
+    templateId: template ? state.response.templateId : null,
+    missingNote,
+    // Ready to send means ready and nothing missing; anything else that isn't already with the
+    // reviewers is outstanding and won't be sent.
+    outstanding: status !== 'in-review' && !(status === 'ready' && state.officer),
+    updated: state.updated,
+    inspectorReviewed: state.inspectorReviewed,
+    inspectorComments: state.inspectorComments
+  })
+}
+
+function crRepViews (data) {
+  return getCrRepresentations().map(rep => crRepView(data, rep))
+}
+
+function crNewestFirst (a, b) {
+  if (a.date !== b.date) return a.date < b.date ? 1 : -1
+  return a.id < b.id ? 1 : -1
+}
+
+function crReadiness (views) {
+  const total = views.length
+  const ready = views.filter(view => view.status === 'ready' && view.officer).length
+  const inReview = views.filter(view => view.status === 'in-review').length
+  const changes = views.filter(view => view.status === 'changes').length
+  const incomplete = views.filter(view => view.status === 'draft').length
+  const unassigned = views.filter(view => !view.officer && view.status !== 'in-review').length
+  const outstanding = views.filter(view => view.outstanding).length
+  return {
+    total,
+    ready,
+    inReview,
+    changes,
+    incomplete,
+    unassigned,
+    outstanding,
+    done: ready + inReview,
+    percent: total ? Math.round((ready + inReview) / total * 100) : 0
+  }
+}
+
+// Sidebar statuses follow from the data, using the shared status vocabulary.
+function buildCrSidebar (data, active, options) {
+  const views = crRepViews(data)
+  const total = views.length
+  const withResponse = views.filter(view => view.hasResponse).length
+  const templates = Object.values(data.templates)
+  const finals = templates.filter(template => template.status === 'final').length
+  const inReview = views.filter(view => view.status === 'in-review').length
+  const started = views.filter(view => ['ready', 'in-review'].includes(view.status)).length
+
+  function progress (done, any, all) {
+    if (done === all) return 'Completed'
+    return any ? 'In progress' : 'Not started'
+  }
+
+  const steps = [
+    { key: 'import', text: 'Import consultation', href: CR + '/import', status: data.uploads.length ? 'Completed' : 'Not started' },
+    { key: 'view', text: 'View and respond', href: (options && options.viewHref) || CR + '/view', status: progress(withResponse, withResponse, total) },
+    { key: 'templates', text: 'Manage response templates', href: CR + '/templates', status: progress(finals, templates.length, CR_THEMES.length) },
+    { key: 'check', text: 'Check and send for review', href: CR + '/check', status: progress(inReview, started, total) },
+    { key: 'review', text: 'Review responses', href: CR + '/review', status: inReview ? 'Not started' : 'Cannot start' }
+  ]
+  return [{
+    items: steps.map(step => ({ text: step.text, href: step.href, status: step.status, active: step.key === active }))
+  }]
+}
+
+function renderCr (req, res, view, active, locals) {
+  const data = getConsultationResponses(req)
+  const failed = crTake(req, 'consultationResponsesErrors') || { errors: {}, values: {} }
+  res.render('consultations/managing-responses/' + view, Object.assign({
+    data,
+    consultation: CR_CONSULTATION,
+    crDate,
+    flash: crTake(req, 'consultationResponsesFlash'),
+    errors: failed.errors,
+    values: failed.values,
+    errorList: Object.keys(failed.errors).map(id => ({ text: failed.errors[id], href: '#' + id })),
+    sidebarSections: buildCrSidebar(data, active, locals && locals.sidebarOptions)
+  }, locals))
+}
+
+function crConsulteesInTheme (views, themeId) {
+  const ids = new Set(views.filter(view => view.themeId === themeId).map(view => view.consulteeId))
+  return CR_CONSULTEES.filter(consultee => ids.has(consultee.id))
+}
+
+router.post(CR + '/reset', (req, res) => {
+  getConsultationResponses(req)
+  req.session.data.consultationResponses = crStartingState()
+  req.session.data.crTheme = 'heritage'
+  req.session.data.crPolicy = 'HE1'
+  req.session.data.crRespondentType = ''
+  req.session.data.crCommentType = ''
+  res.redirect(CR + (req.body._to === 'import' ? '/import' : ''))
+})
+
+// --- Import consultation ---
+
+router.get(CR + '/import', (req, res) => {
+  renderCr(req, res, 'import', 'import')
+})
+
+// The form isn't multipart, so the browser sends only the file's name. That's all we keep.
+router.post(CR + '/import', (req, res) => {
+  const data = getConsultationResponses(req)
+  const fileName = crText(req.body._file).split(/[\\/]/).pop()
+  if (!fileName) {
+    crSetErrors(req, { file: 'Select a CSV file to upload' })
+  } else if (!/\.csv$/i.test(fileName)) {
+    crSetErrors(req, { file: 'The selected file must be a CSV' })
+  } else {
+    data.uploads.unshift({
+      id: 'upload-' + Date.now().toString(36),
+      title: fileName.replace(/\.csv$/i, ''),
+      size: (0.5 + (fileName.length % 30) / 10).toFixed(1) + ' MB',
+      date: crToday()
+    })
+    crFlash(req, fileName + ' has been uploaded')
+  }
+  res.redirect(CR + '/import')
+})
+
+router.post(CR + '/import/:uploadId/remove', (req, res) => {
+  const data = getConsultationResponses(req)
+  const upload = data.uploads.find(candidate => candidate.id === req.params.uploadId)
+  if (upload) {
+    data.uploads = data.uploads.filter(candidate => candidate !== upload)
+    crFlash(req, upload.title + ' has been removed')
+  }
+  res.redirect(CR + '/import')
+})
+
+// --- View and respond ---
+
+router.get(CR + '/view', (req, res) => {
+  const data = getConsultationResponses(req)
+  const views = crRepViews(data)
+  const search = crText(req.session.data.crConsulteeSearch)
+  const rows = CR_CONSULTEES
+    .filter(consultee => !search || consultee.name.toLowerCase().includes(search.toLowerCase()))
+    .map(consultee => {
+      const reps = views.filter(view => view.consulteeId === consultee.id)
+      return { consultee, total: reps.length, assigned: reps.filter(view => view.hasResponse).length }
+    })
+  const pageCount = Math.ceil(rows.length / CR_PAGE_SIZE)
+  const page = crPageNumber(req.query._page, pageCount)
+  renderCr(req, res, 'view-consultees', 'view', {
+    search,
+    rows: rows.slice((page - 1) * CR_PAGE_SIZE, page * CR_PAGE_SIZE),
+    resultCount: rows.length,
+    page,
+    pageCount
+  })
+})
+
+router.get(CR + '/view/themes', (req, res) => {
+  renderCr(req, res, 'view-themes', 'view', { themes: CR_THEMES, totalRespondents: CR_TOTAL_RESPONDENTS })
+})
+
+router.param('crThemeId', (req, res, next, id) => {
+  req.crTheme = getCrTheme(id)
+  if (!req.crTheme) return res.redirect(CR + '/view/themes')
+  next()
+})
+
+router.get(CR + '/themes/:crThemeId', (req, res) => {
+  const data = getConsultationResponses(req)
+  const theme = req.crTheme
+  const views = crRepViews(data).filter(view => view.themeId === theme.id)
+  renderCr(req, res, 'theme', 'view', {
+    theme,
+    template: data.templates[theme.id] || null,
+    consultees: crConsulteesInTheme(views, theme.id),
+    totalRespondents: CR_TOTAL_RESPONDENTS,
+    percent: (theme.respondents / CR_TOTAL_RESPONDENTS * 100).toFixed(1),
+    repCount: views.length,
+    assignedCount: views.filter(view => view.responseSource === 'template').length,
+    ownCount: views.filter(view => view.responseSource === 'own').length,
+    unassignedCount: views.filter(view => !view.hasResponse).length
+  })
+})
+
+// "Assign this response to theme" is the bulk response: the standard response becomes final
+// and is assigned to every representation on the theme that doesn't have a response yet.
+// Representations with a response written for them keep it.
+router.post(CR + '/themes/:crThemeId', (req, res) => {
+  const data = getConsultationResponses(req)
+  const theme = req.crTheme
+  const text = crText(req.body._response)
+  const back = CR + '/themes/' + theme.id + '#standard-response'
+  if (!text) {
+    crSetErrors(req, { response: 'Enter a standard response for this theme' })
+    return res.redirect(back)
+  }
+  const existing = data.templates[theme.id]
+  const today = crToday()
+
+  if (req.body._action === 'assign') {
+    data.templates[theme.id] = { text, status: 'final', updated: today }
+    let count = 0
+    const consultees = new Set()
+    getCrRepresentations().filter(rep => rep.themeId === theme.id).forEach(rep => {
+      const state = data.reps[rep.id]
+      if (state.response) return
+      state.response = { templateId: theme.id }
+      state.status = 'draft'
+      state.officer = state.officer || CR_OFFICER
+      state.updated = today
+      consultees.add(rep.consulteeId)
+      count++
+    })
+    crFlash(req, count
+      ? 'Standard response assigned to ' + count + ' representation' + (count === 1 ? '' : 's') + ' from ' + consultees.size + ' consultee' + (consultees.size === 1 ? '' : 's')
+      : 'Standard response saved. Every representation on this theme already had a response, so nothing new was assigned')
+  } else {
+    data.templates[theme.id] = { text, status: existing ? existing.status : 'draft', updated: today }
+    crFlash(req, existing && existing.status === 'final' ? 'Standard response updated for every representation it is assigned to' : 'Draft standard response saved')
+  }
+  res.redirect(back)
+})
+
+router.param('crConsulteeId', (req, res, next, id) => {
+  req.crConsultee = getCrConsultee(id)
+  if (!req.crConsultee) return res.redirect(CR + '/view')
+  next()
+})
+
+router.get(CR + '/consultees/:crConsulteeId', (req, res) => {
+  const data = getConsultationResponses(req)
+  const consultee = req.crConsultee
+  const reps = crRepViews(data).filter(view => view.consulteeId === consultee.id).sort(crNewestFirst)
+  const allInReview = reps.length && reps.every(view => view.status === 'in-review')
+  const rounds = CR_CONSULTATIONS
+    .filter(round => round.id === CR_CONSULTATION.id || consultee.earlier.includes(round.id))
+    .map(round => {
+      const current = round.id === CR_CONSULTATION.id
+      return {
+        id: round.id,
+        title: round.title,
+        date: current ? reps[0].date : round.date,
+        fileName: crConsulteeDocument(consultee, round.id).fileName,
+        current,
+        statusLabel: current ? (allInReview ? 'In review' : 'Pending response') : 'Response sent',
+        statusClass: current ? (allInReview ? 'dlp-cr-status--blue' : 'dlp-cr-status--orange') : 'dlp-cr-status--green'
+      }
+    })
+    .reverse()
+  const showResponses = req.query._view === 'responses'
+  const selected = rounds.find(round => round.id === req.query._doc) || rounds[0]
+  renderCr(req, res, 'consultee', 'view', {
+    consultee,
+    rounds,
+    selected,
+    document: crConsulteeDocument(consultee, selected.id),
+    showResponses,
+    reps
+  })
+})
+
+// --- Manage response templates ---
+
+router.get(CR + '/templates', (req, res) => {
+  const data = getConsultationResponses(req)
+  const views = crRepViews(data)
+  const rows = []
+  const missing = []
+  CR_THEMES.forEach(theme => {
+    const template = data.templates[theme.id]
+    if (!template) return missing.push(theme)
+    const themeViews = views.filter(view => view.themeId === theme.id)
+    const consultees = crConsulteesInTheme(themeViews, theme.id)
+    const assigned = consultees.filter(consultee =>
+      themeViews.some(view => view.consulteeId === consultee.id && view.templateId === theme.id))
+    rows.push({ theme, template, assigned: assigned.length, consultees: consultees.length })
+  })
+  renderCr(req, res, 'templates', 'templates', { rows, missing })
+})
+
+// --- Check and send for review ---
+
+const CR_CHECK_STATUSES = [
+  { value: 'outstanding', text: 'Not ready to send' },
+  { value: 'draft', text: 'Draft' },
+  { value: 'ready', text: 'Ready for review' },
+  { value: 'changes', text: 'Needs changes' },
+  { value: 'in-review', text: 'In review' }
+]
+const CR_REVIEW_STATUSES = [
+  { value: 'not-sent', text: 'Not sent for review' },
+  { value: 'sent', text: 'Sent for review' }
+]
+const CR_SORTS = [
+  { value: 'updated', text: 'Recently updated' },
+  { value: 'respondent', text: 'Respondent (A to Z)' },
+  { value: 'policy', text: 'Policy' }
+]
+
+function crCheckFilters (sessionData) {
+  return {
+    search: crText(sessionData.crcSearch),
+    theme: crPick(sessionData.crcTheme, CR_THEMES.map(theme => theme.id)),
+    policy: crPick(sessionData.crcPolicy, CR_POLICIES.map(policy => policy.ref)),
+    respondentType: crPick(sessionData.crcRespondentType, CR_RESPONDENT_TYPES),
+    commentType: crPick(sessionData.crcCommentType, CR_COMMENT_TYPES),
+    status: crPick(sessionData.crcStatus, CR_CHECK_STATUSES.map(status => status.value)),
+    review: crPick(sessionData.crcReview, CR_REVIEW_STATUSES.map(status => status.value)),
+    sort: crPick(sessionData.crcSort, CR_SORTS.map(sort => sort.value)) || 'updated'
+  }
+}
+
+function crMatchesCheck (view, filters) {
+  if (filters.theme && view.themeId !== filters.theme) return false
+  if (filters.policy && view.policyRef !== filters.policy) return false
+  if (filters.respondentType && view.respondentType !== filters.respondentType) return false
+  if (filters.commentType && view.commentType !== filters.commentType) return false
+  if (filters.status === 'outstanding' && !view.outstanding) return false
+  if (filters.status && filters.status !== 'outstanding' && view.status !== filters.status) return false
+  if (filters.review === 'sent' && view.status !== 'in-review') return false
+  if (filters.review === 'not-sent' && view.status === 'in-review') return false
+  if (filters.search) {
+    const haystack = [view.consulteeName, view.id, view.text, view.responseText].join(' ').toLowerCase()
+    if (!haystack.includes(filters.search.toLowerCase())) return false
+  }
+  return true
+}
+
+const CR_SORTERS = {
+  updated: (a, b) => (a.updated === b.updated ? (a.id < b.id ? -1 : 1) : (a.updated < b.updated ? 1 : -1)),
+  respondent: (a, b) => a.consulteeName.localeCompare(b.consulteeName) || (a.id < b.id ? -1 : 1),
+  policy: (a, b) => a.policyRef.localeCompare(b.policyRef, 'en', { numeric: true }) || (a.id < b.id ? -1 : 1)
+}
+
+router.get(CR + '/check', (req, res) => {
+  const data = getConsultationResponses(req)
+  const views = crRepViews(data)
+  const filters = crCheckFilters(req.session.data)
+  const byTheme = req.query._view === 'themes'
+  const matching = views.filter(view => crMatchesCheck(view, filters)).sort(CR_SORTERS[filters.sort])
+  const pageCount = Math.ceil(matching.length / CR_PAGE_SIZE)
+  const page = crPageNumber(req.query._page, pageCount)
+  const themeRows = CR_THEMES.map(theme => {
+    const readiness = crReadiness(views.filter(view => view.themeId === theme.id))
+    return Object.assign({ theme }, readiness)
+  })
+  renderCr(req, res, 'check', 'check', {
+    filters,
+    byTheme,
+    readiness: crReadiness(views),
+    themeCount: CR_THEMES.length,
+    themeRows,
+    results: matching.slice((page - 1) * CR_PAGE_SIZE, page * CR_PAGE_SIZE),
+    resultCount: matching.length,
+    page,
+    pageCount,
+    options: crFilterOptions(),
+    statuses: CR_CHECK_STATUSES,
+    reviewStatuses: CR_REVIEW_STATUSES,
+    sorts: CR_SORTS,
+    lastUpdated: crDate(crToday(), true)
+  })
+})
+
+// Marks the ticked responses ready. Only a response with an officer and some wording can be;
+// the rest are left alone and the message says how many and why.
+router.post(CR + '/check/mark-ready', (req, res) => {
+  const data = getConsultationResponses(req)
+  const ids = [].concat(req.body._repIds || [])
+  let marked = 0
+  let skipped = 0
+  ids.forEach(id => {
+    const rep = getCrRepresentation(id)
+    if (!rep) return
+    const view = crRepView(data, rep)
+    if (view.status === 'in-review') return
+    if (!view.hasResponse || !view.officer) { skipped++; return }
+    data.reps[id].status = 'ready'
+    data.reps[id].updated = crToday()
+    marked++
+  })
+  let message = marked + ' response' + (marked === 1 ? '' : 's') + ' marked ready for review'
+  if (skipped) message += '. ' + skipped + ' could not be marked because ' + (skipped === 1 ? 'it has' : 'they have') + ' no officer or no response yet'
+  crFlash(req, message)
+  res.redirect(CR + '/check' + (req.body._page ? '?_page=' + encodeURIComponent(req.body._page) : ''))
+})
+
+router.post(CR + '/check/send', (req, res) => {
+  const data = getConsultationResponses(req)
+  let sent = 0
+  crRepViews(data).forEach(view => {
+    if (view.status === 'ready' && view.officer) {
+      data.reps[view.id].status = 'in-review'
+      data.reps[view.id].updated = crToday()
+      sent++
+    }
+  })
+  crFlash(req, sent
+    ? sent + ' response' + (sent === 1 ? '' : 's') + ' sent to the Planning Policy review team'
+    : 'There were no ready responses to send')
+  res.redirect(CR + '/check')
+})
+
+router.get(CR + '/review', (req, res) => {
+  renderCr(req, res, 'review', 'review')
+})
+
+// --- Side-by-side views (alternative pathway) ---
+//
+// Both list the representations matching four sticky filters (crTheme, crPolicy,
+// crRespondentType, crCommentType — the kit stores them from the query string) and show the
+// selected one beside the same respondent's earlier representation and the LPA's published
+// reply to it. The officer drafts a response; the inspector comments.
+
+// Select options for the filters, as { value, text }.
+function crFilterOptions () {
+  return {
+    themes: CR_THEMES.map(theme => ({ value: theme.id, text: theme.title })),
+    policies: CR_POLICIES.map(policy => ({ value: policy.ref, text: policy.ref + ' — ' + policy.title })),
+    respondentTypes: CR_RESPONDENT_TYPES.map(type => ({ value: type, text: type })),
+    commentTypes: CR_COMMENT_TYPES.map(type => ({ value: type, text: type }))
+  }
+}
+
+function crSideBySideFilters (sessionData) {
+  return {
+    theme: crPick(sessionData.crTheme, CR_THEMES.map(theme => theme.id)),
+    policy: crPick(sessionData.crPolicy, CR_POLICIES.map(policy => policy.ref)),
+    respondentType: crPick(sessionData.crRespondentType, CR_RESPONDENT_TYPES),
+    commentType: crPick(sessionData.crCommentType, CR_COMMENT_TYPES)
+  }
+}
+
+function crSideBySide (req, data) {
+  const filters = crSideBySideFilters(req.session.data)
+  const matching = crRepViews(data).filter(view => crMatchesCheck(view, filters)).sort(crNewestFirst)
+  const pageCount = Math.ceil(matching.length / CR_SIDE_BY_SIDE_PAGE_SIZE)
+  let selected = matching.find(view => view.id === req.query._rep) || null
+  // A representation linked to directly is shown even if the filters have moved on since.
+  if (!selected && req.query._rep) {
+    const rep = getCrRepresentation(req.query._rep)
+    if (rep) selected = crRepView(data, rep)
+  }
+  const selectedIndex = selected ? matching.findIndex(view => view.id === selected.id) : -1
+  const page = req.query._page
+    ? crPageNumber(req.query._page, pageCount)
+    : (selectedIndex >= 0 ? Math.floor(selectedIndex / CR_SIDE_BY_SIDE_PAGE_SIZE) + 1 : 1)
+  const pageItems = matching.slice((page - 1) * CR_SIDE_BY_SIDE_PAGE_SIZE, page * CR_SIDE_BY_SIDE_PAGE_SIZE)
+  if (!selected) selected = pageItems[0] || null
+
+  const theme = getCrTheme(filters.theme)
+  const policy = CR_POLICIES.find(candidate => candidate.ref === filters.policy)
+  const summary = [theme ? theme.title : 'All themes', policy ? policy.ref + ' — ' + policy.title : 'All policies']
+  return {
+    filters,
+    filterSummary: summary.join(' · '),
+    matching,
+    pageItems,
+    page,
+    pageCount,
+    firstItem: matching.length ? (page - 1) * CR_SIDE_BY_SIDE_PAGE_SIZE + 1 : 0,
+    lastItem: (page - 1) * CR_SIDE_BY_SIDE_PAGE_SIZE + pageItems.length,
+    selected,
+    options: crFilterOptions()
+  }
+}
+
+router.get(CR + '/officer', (req, res) => {
+  const data = getConsultationResponses(req)
+  const view = crSideBySide(req, data)
+  const templateOptions = CR_THEMES
+    .filter(theme => data.templates[theme.id])
+    .map(theme => ({ id: theme.id, title: theme.title, text: data.templates[theme.id].text, status: data.templates[theme.id].status }))
+  renderCr(req, res, 'officer', 'view', Object.assign(view, {
+    templateOptions,
+    preview: req.query._preview === '1',
+    sidebarOptions: { viewHref: CR + '/officer' }
+  }))
+})
+
+// Save, mark ready or preview. A response whose wording is still exactly the chosen template's is
+// stored as that template, so it keeps following edits to it; anything changed is the officer's own.
+router.post(CR + '/officer/:repId', (req, res) => {
+  const data = getConsultationResponses(req)
+  const rep = getCrRepresentation(req.params.repId)
+  if (!rep) return res.redirect(CR + '/officer')
+  const state = data.reps[rep.id]
+  const templateId = crPick(req.body._template, Object.keys(data.templates))
+  const template = templateId ? data.templates[templateId] : null
+  let text = crText(req.body._response)
+  if (!text && template) text = template.text
+  const action = ['save', 'ready', 'preview'].includes(req.body._action) ? req.body._action : 'save'
+  const back = CR + '/officer?_rep=' + rep.id + (req.body._page ? '&_page=' + encodeURIComponent(req.body._page) : '')
+
+  if (!text) {
+    crSetErrors(req, { response: 'Enter an LPA response, or choose a template to start from' }, { template: templateId })
+    return res.redirect(back + '#lpa-response')
+  }
+  state.response = template && text === template.text ? { templateId } : { text }
+  state.officer = state.officer || CR_OFFICER
+  state.updated = crToday()
+  if (action === 'ready') {
+    state.status = 'ready'
+    crFlash(req, 'Response to ' + rep.id + ' marked ready for review')
+  } else {
+    state.status = 'draft'
+    crFlash(req, action === 'preview' ? '' : 'Draft response to ' + rep.id + ' saved')
+  }
+  res.redirect(back + (action === 'preview' ? '&_preview=1#preview' : ''))
+})
+
+router.get(CR + '/inspector', (req, res) => {
+  const data = getConsultationResponses(req)
+  const view = crSideBySide(req, data)
+  renderCr(req, res, 'inspector', 'inspector', Object.assign(view, {
+    reviewedCount: view.matching.filter(rep => rep.inspectorReviewed).length,
+    inspector: CR_INSPECTOR
+  }))
+})
+
+router.post(CR + '/inspector/:repId', (req, res) => {
+  const data = getConsultationResponses(req)
+  const rep = getCrRepresentation(req.params.repId)
+  if (!rep) return res.redirect(CR + '/inspector')
+  const state = data.reps[rep.id]
+  const back = CR + '/inspector?_rep=' + rep.id + (req.body._page ? '&_page=' + encodeURIComponent(req.body._page) : '')
+  const text = crText(req.body._comment)
+
+  if (req.body._action === 'reviewed') {
+    state.inspectorReviewed = !state.inspectorReviewed
+    if (text) state.inspectorComments.push({ author: CR_INSPECTOR, date: crToday(), text })
+    crFlash(req, rep.id + (state.inspectorReviewed ? ' marked as reviewed' : ' marked as not reviewed'))
+    return res.redirect(back)
+  }
+  if (!text) {
+    crSetErrors(req, { comment: 'Enter a comment' })
+    return res.redirect(back + '#inspector-comment')
+  }
+  state.inspectorComments.push({ author: CR_INSPECTOR, date: crToday(), text })
+  crFlash(req, 'Comment saved on ' + rep.id)
+  res.redirect(back + '#inspector-comments')
 })
