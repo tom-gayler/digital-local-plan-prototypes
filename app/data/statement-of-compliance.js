@@ -243,6 +243,74 @@ function getPlannedActivity (ref, variant) {
   return data ? data.plannedActivity : null
 }
 
+// A high-level, plan-wide timeline for Gateway 2 progress check's Plan Progress page — the
+// gateways, consultations and giving of notice, one milestone each, reusing the same dates,
+// actors and document links already recorded against each regulation above rather than a
+// second, independently-typed set of facts that could drift out of step with the statement of
+// compliance. Always reflects the "now" (draft) state: Gateway 2 itself has no status, since
+// its own review is still in progress, and the Regulation 27 consultation has no status or
+// actor, since it hasn't happened yet — both render with a hollow marker.
+function getPlanTimeline () {
+  const notice = getHistory('Regulation 19', 'completed')[1]
+  const scopingOpen = getHistory('Regulation 20', 'completed')[0]
+  const scopingClose = getHistory('Regulation 20', 'completed')[1]
+  const gateway1 = getHistory('Regulation 21', 'completed')[1]
+  const contentOpen = getHistory('Regulation 23', 'completed')[0]
+  const contentClose = getHistory('Regulation 23', 'completed')[1]
+  const gateway2Submitted = getHistory('Regulation 26', 'draft')[0]
+
+  return [
+    {
+      type: 'Notice of intention given',
+      description: 'Notice of intention to commence local plan preparation published (Regulation 19).',
+      date: notice.date,
+      actor: notice.actor,
+      status: 'Done',
+      document: notice.document,
+      documentHref: notice.documentHref
+    },
+    {
+      type: 'Scoping consultation',
+      description: 'Consulted prescribed bodies and the public on the scope of the new plan (Regulation 20).',
+      date: scopingOpen.date + ' to ' + scopingClose.date,
+      actor: scopingOpen.actor,
+      status: 'Done',
+      document: scopingOpen.document,
+      documentHref: scopingOpen.documentHref
+    },
+    {
+      type: 'Gateway 1',
+      description: 'Self-assessment of readiness to begin preparing the local plan completed and published (Regulation 21).',
+      date: gateway1.date,
+      actor: gateway1.actor,
+      status: 'Done',
+      document: gateway1.document,
+      documentHref: gateway1.documentHref
+    },
+    {
+      type: 'Consultation on proposed content and evidence',
+      description: 'Consulted on the proposed content of the local plan and its supporting evidence (Regulation 23).',
+      date: contentOpen.date + ' to ' + contentClose.date,
+      actor: contentOpen.actor,
+      status: 'Done',
+      document: contentOpen.document,
+      documentHref: contentOpen.documentHref
+    },
+    {
+      type: 'Gateway 2',
+      description: 'Submitted for Gateway 2 review by an appointed person; observations and advice awaited (Regulation 26).',
+      date: gateway2Submitted.date,
+      actor: gateway2Submitted.actor
+    },
+    {
+      type: 'Consultation on the proposed local plan',
+      description: 'Consultation on the full proposed local plan, incorporating Gateway 2 advice, once observations are addressed (Regulation 27).',
+      date: 'Planned for January 2027',
+      actor: 'Policy team'
+    }
+  ]
+}
+
 // Every document referenced anywhere in REQUIREMENT_DATA's history, regardless of variant —
 // used to validate the document viewer route rather than rendering a page for any arbitrary
 // title typed into the URL.
@@ -265,5 +333,6 @@ module.exports = {
   getStatus,
   getHistory,
   getPlannedActivity,
+  getPlanTimeline,
   isKnownDocument
 }

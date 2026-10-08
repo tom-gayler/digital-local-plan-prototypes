@@ -76,6 +76,7 @@ const {
   getStatus: getRequirementStatus,
   getHistory: getRequirementHistory,
   getPlannedActivity,
+  getPlanTimeline,
   isKnownDocument
 } = require('./data/statement-of-compliance.js')
 
@@ -2081,7 +2082,8 @@ router.get('/gateway-2-progress-check', (req, res) => {
     chapters,
     evidence,
     chapterStatusColours: CHAPTER_STATUS_COLOURS,
-    evidenceStatusColours: EVIDENCE_STATUS_COLOURS
+    evidenceStatusColours: EVIDENCE_STATUS_COLOURS,
+    planTimeline: getPlanTimeline()
   })
 })
 

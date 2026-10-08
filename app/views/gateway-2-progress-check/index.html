@@ -1,6 +1,7 @@
 {% extends "layouts/main.html" %}
 
 {% from "partials/external-header/macro.njk" import appExternalHeader %}
+{% from "partials/timeline/macro.njk" import appTimeline %}
 
 {% set pageName="Gateway 2 progress check" %}
 
@@ -19,6 +20,10 @@
     <h1 class="govuk-heading-xl">Plan Progress</h1>
 
     <p class="govuk-body-l">{{ organisationName }} Local Plan</p>
+
+    <h2 class="govuk-heading-l govuk-!-margin-top-6">Plan timeline</h2>
+
+    {{ appTimeline({ entries: planTimeline, caption: "Gateways, consultations and giving of notice, drawn from the statement of compliance." }) }}
 
     <h2 class="govuk-heading-l govuk-!-margin-top-6">Chapters</h2>
 
