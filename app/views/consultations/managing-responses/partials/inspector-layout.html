@@ -1,0 +1,54 @@
+{#
+  The inspector's screen. The inspector is outside the LPA, so this shows the external header
+  rather than the service header and its internal nav. The `header` block is overridden WITHOUT
+  super() on purpose: the URL sits under /consultations, so `activeSection` is set and super()
+  would bring the internal nav back (as evidence/commissioned/partials/external-layout.html).
+#}
+
+{% extends "layouts/main-with-sidebar.html" %}
+
+{% from "partials/side-navigation/macro.njk" import appSideNavigation %}
+{% from "partials/external-header/macro.njk" import appExternalHeader %}
+{% from "govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "govuk/components/breadcrumbs/macro.njk" import govukBreadcrumbs %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "consultations/managing-responses/partials/macros.html" import crConsultationCard %}
+
+{% block header %}
+  {{ appExternalHeader({ organisationName: organisationName, title: "Local plan examination", user: inspector }) }}
+  {{ govukPhaseBanner({
+    tag: { text: "Prototype" },
+    text: "This is a prototype – it is not a live service. Do not enter live data or use it to support a live service"
+  }) }}
+{% endblock %}
+
+{% block sideNavigation %}
+  <div class="dlp-cr-sidebar">
+    {{ appSideNavigation({
+      title: "Manage consultation responses",
+      ariaLabel: "Inspector tasks",
+      sections: [{ items: [{ text: "Review consultation responses", href: "/consultations/managing-responses/inspector", active: true }] }]
+    }) }}
+    <div class="dlp-cr-sidebar-panels">
+      {{ crConsultationCard(consultation) }}
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div class="dlp-cr-page">
+    {{ govukBreadcrumbs({ items: breadcrumbs, classes: "govuk-!-margin-top-0" }) }}
+
+    {% if errorList | length %}
+      {{ govukErrorSummary({ titleText: "There is a problem", errorList: errorList }) }}
+    {% endif %}
+
+    {% if flash %}
+      {{ govukNotificationBanner({ type: "success", text: flash }) }}
+    {% endif %}
+
+    {% block pageContent %}{% endblock %}
+  </div>
+{% endblock %}

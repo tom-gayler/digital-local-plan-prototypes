@@ -1,0 +1,155 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% from "consultations/managing-responses/partials/macros.html" import crTag %}
+
+{% set pageName = consultee.name %}
+{% set base = "/consultations/managing-responses/consultees/" + consultee.id %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "View and respond", href: "/consultations/managing-responses/view" },
+  { text: consultee.name }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl govuk-!-margin-bottom-4">{{ consultee.name }}</h1>
+
+<dl class="dlp-cr-inline-facts">
+  <div><dt>Type:</dt> <dd>{{ consultee.type }}</dd></div>
+  <div><dt>Contact:</dt> <dd>{{ consultee.contact }}</dd></div>
+</dl>
+
+<h2 class="govuk-heading-l">Representations</h2>
+
+<table class="govuk-table dlp-cr-rounds">
+  <caption class="govuk-table__caption govuk-visually-hidden">Representations from {{ consultee.name }}</caption>
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header">Consultation</th>
+      <th scope="col" class="govuk-table__header">Date</th>
+      <th scope="col" class="govuk-table__header">Document</th>
+      <th scope="col" class="govuk-table__header">Our response</th>
+      <th scope="col" class="govuk-table__header"><span class="govuk-visually-hidden">Actions</span></th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for round in rounds %}
+      {% set isSelected = round.id == selected.id and not showResponses %}
+      <tr class="govuk-table__row{% if isSelected %} dlp-cr-rounds__row--selected{% endif %}">
+        <td class="govuk-table__cell">{{ round.title }}</td>
+        <td class="govuk-table__cell dlp-cr-nowrap">{{ crDate(round.date) }}</td>
+        <td class="govuk-table__cell dlp-cr-break">
+          <a class="govuk-link" href="{{ base }}?_doc={{ round.id }}#document">{{ round.fileName }}</a>
+        </td>
+        <td class="govuk-table__cell"><strong class="dlp-cr-status {{ round.statusClass }}">{{ round.statusLabel }}</strong></td>
+        <td class="govuk-table__cell">
+          <ul class="govuk-list govuk-!-margin-bottom-0">
+            <li>
+              {% if isSelected %}
+                <span class="dlp-cr-muted">Viewing</span>
+              {% else %}
+                <a class="govuk-link govuk-link--no-visited-state" href="{{ base }}?_doc={{ round.id }}#document">View<span class="govuk-visually-hidden"> {{ round.title | lower }} submission</span></a>
+              {% endif %}
+            </li>
+            {% if round.current %}
+              <li><a class="govuk-link govuk-link--no-visited-state" href="{{ base }}?_view=responses#assigned-responses">View assigned responses</a></li>
+            {% endif %}
+          </ul>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if showResponses %}
+
+  <h2 class="govuk-heading-m" id="assigned-responses">Assigned responses: consultation on the proposed local plan</h2>
+  <p class="govuk-body">
+    {{ consultee.name }} raised {{ reps | length }} issue{% if reps | length != 1 %}s{% endif %}. Each is listed with the
+    response assigned to it, whether that's a theme's standard response or one written for it.
+  </p>
+  {% for rep in reps %}
+    <section class="dlp-cr-assigned" aria-labelledby="assigned-{{ rep.id }}">
+      <div class="dlp-cr-assigned__head">
+        <h3 class="govuk-heading-s govuk-!-margin-bottom-0" id="assigned-{{ rep.id }}">{{ rep.id }} · {{ rep.policyRef }} {{ rep.policyTitle }}</h3>
+        {{ crTag(rep.commentType, rep.commentColour) }}
+      </div>
+      <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-2">Theme: {{ rep.themeTitle }} · Submitted {{ crDate(rep.date) }}</p>
+      <p class="govuk-body-s">{{ rep.text }}</p>
+      <div class="dlp-cr-assigned__response">
+        <div class="dlp-cr-panel__title-row">
+          <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-0">Our response</p>
+          {{ crTag(rep.statusLabel, rep.statusColour) }}
+        </div>
+        {% if rep.hasResponse %}
+          <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-1">
+            {% if rep.responseSource == "template" %}
+              Standard response: <a class="govuk-link" href="/consultations/managing-responses/themes/{{ rep.themeId }}#standard-response">{{ rep.themeTitle }}</a>
+            {% else %}
+              Written for this representation
+            {% endif %}
+            {% if rep.officer %} · Officer: {{ rep.officer }}{% endif %}
+          </p>
+          <p class="govuk-body-s govuk-!-margin-bottom-2">{{ rep.responseText }}</p>
+        {% else %}
+          <p class="govuk-body-s govuk-!-margin-bottom-2">No response has been assigned yet.</p>
+        {% endif %}
+        <a class="govuk-link govuk-link--no-visited-state govuk-body-s" href="/consultations/managing-responses/officer?_rep={{ rep.id }}">
+          {{ "Edit response" if rep.hasResponse else "Write a response" }}<span class="govuk-visually-hidden"> to {{ rep.id }}</span>
+        </a>
+      </div>
+    </section>
+  {% endfor %}
+
+{% else %}
+
+  <h2 class="govuk-heading-m" id="document">Viewing: {{ selected.title }} submission</h2>
+
+  {# Stands in for a PDF viewer. Download and open in new window are placeholders. #}
+  <div class="dlp-cr-viewer">
+    <div class="dlp-cr-viewer__bar">
+      <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-0 dlp-cr-break">{{ document.fileName }}</p>
+      <ul class="dlp-cr-viewer__actions" aria-hidden="true">
+        <li><span class="govuk-link">Download</span></li>
+        <li><span class="govuk-link">Open in new window</span></li>
+      </ul>
+    </div>
+    <div class="dlp-cr-viewer__page">
+      <h3 class="govuk-heading-m govuk-!-margin-bottom-2">{{ document.title }}</h3>
+      <p class="govuk-body-s dlp-cr-muted"><em>{{ document.subtitle }}</em></p>
+
+      <h4 class="govuk-heading-s">1. Introduction</h4>
+      <p class="govuk-body-s">{{ document.intro }}</p>
+
+      {% if document.figure %}
+        {% set maxValue = 0 %}
+        {% for bar in document.figure.bars %}{% if bar.value > maxValue %}{% set maxValue = bar.value %}{% endif %}{% endfor %}
+        <figure class="dlp-cr-figure">
+          <figcaption class="govuk-body-s govuk-!-font-weight-bold">{{ document.figure.caption }}</figcaption>
+          <ul class="dlp-cr-figure__bars">
+            {% for bar in document.figure.bars %}
+              <li class="dlp-cr-figure__bar-item">
+                <span class="dlp-cr-figure__value">{{ bar.value }}%</span>
+                <span class="dlp-cr-figure__bar dlp-cr-figure__bar--{{ loop.index }}" style="height: {{ (bar.value / maxValue * 100) | round }}%"></span>
+                <span class="dlp-cr-figure__label">{{ bar.label }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </figure>
+      {% endif %}
+
+      {% for section in document.sections %}
+        <h4 class="govuk-heading-s">{{ loop.index + 1 }}. {{ section.heading }}</h4>
+        <p class="govuk-body-s">{{ section.text }}{% if section.ref %} <span class="dlp-cr-muted">({{ section.ref }})</span>{% endif %}</p>
+      {% endfor %}
+    </div>
+  </div>
+
+{% endif %}
+
+<p class="govuk-body govuk-!-margin-top-6">
+  <a class="govuk-link govuk-link--no-visited-state" href="/consultations/managing-responses/view">← Back to View and respond</a>
+</p>
+
+{% endblock %}

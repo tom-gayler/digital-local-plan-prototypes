@@ -129,7 +129,7 @@ prototype" menu.
    The active nav item is `#1d8feb` (a precise brand blue, not a `govuk-colour()` tint);
    everything else is white — see `app/assets/sass/_service-header.scss`.
 2. `activeSection` (`"project-management"` | `"policy-writing"` | `"evidence"` |
-   `"pins-view"` | `"user-stories"`) is set
+   `"consultations"` | `"pins-view"` | `"user-stories"` | `"statement-of-compliance"`) is set
    automatically by a `router.use` middleware at the top of `app/routes.js`, based on the
    request path — no per-page wiring needed, since that middleware runs for every request
    (including plain `app/views/*/index.html` pages with no custom route). `"pins-view"` covers
@@ -156,8 +156,8 @@ Styling lives in `app/assets/sass/_service-header.scss` (`.app-service-header*`)
 2. Add an entry to `app/views/index.html` linking to it, with a short description and a
    "User need:" line, matching the existing entries' format.
 
-Prototypes that belong to an area (Policy writing, Evidence, PINS view) are listed on that
-area's hub page rather than on `/`. Each hub splits them under two headings: **Current
+Prototypes that belong to an area (Policy writing, Evidence, Consultations, PINS view) are
+listed on that area's hub page rather than on `/`. Each hub splits them under two headings: **Current
 prototypes** ("These are the most recent prototypes we've developed. We'll be testing these over
 the next few weeks.") and **Previous versions** ("These are prototypes we've tested through
 Design Feedback sessions and other informal tests."). Entries under them are `h3`s. A new
@@ -539,6 +539,68 @@ comments, adds notes and accepts it into the library.
 - **Inert placeholders from the design:** both rich-text toolbars, "Edit metadata" and
   "Download PDF". File uploads keep only the file name (the form isn't multipart and nothing is
   stored).
+
+## Managing consultation responses
+
+`/consultations/managing-responses` (`app/views/consultations/managing-responses/`) is built from
+the Figma frames in the git-ignored `Figma screenshots/Managing consultation responses/` folder.
+It is the first prototype in the Consultations area, which has its own hub at `/consultations`;
+the header's "Consultations" item, previously a disabled placeholder, now links there.
+
+- **Two pathways.** The main one (frames 1–6 and 9) is Import → View and respond (by consultee
+  or by theme) → theme / consultee pages → Manage response templates → Check and send for review.
+  The alternative (frames 7 and 8) is the side-by-side comparison: `/officer` for the policy
+  officer, `/inspector` for the inspector. Each pathway has its own entry on the landing page.
+  "Review responses" has no design, so its page says so.
+- **The inspector screen is an external user's**, so `partials/inspector-layout.html` overrides
+  `header` without `super()` (the same reason as the commissioned-evidence consultant screens)
+  and shows `appExternalHeader`. It is also listed on the PINS view hub.
+- **Content is static, state is small.** Themes, consultees, representations and consultee
+  documents are in `app/data/consultation-responses.js`. Most representations are generated
+  deterministically from per-theme comment pools so the counts feel real; the side-by-side worked
+  examples (REP-1048, 1044, 1031, 1026) are written out in `KEY_REPRESENTATIONS`. Session data
+  holds one object, `consultationResponses` (uploads, templates by theme id, and per-representation
+  `{officer, status, response, updated, inspectorReviewed, inspectorComments}`), read only through
+  `getConsultationResponses` and stamped with `CONSULTATION_RESPONSES_SCHEMA_VERSION`. **Bump it
+  when the seed's shape changes.** The seed comes from `startingState()`; the landing page's reset
+  rebuilds it.
+- **A response is `{ templateId }` or `{ text }`, never a copy of a template.** That is what makes
+  "When you edit a response it will change for all assigned responses" true. The officer view
+  stores a response as the template while its wording is unchanged and as `{ text }` once edited.
+- **"Assign this response to theme" is the bulk response.** It marks the theme's standard
+  response final and assigns it to every representation on the theme with no response yet. A
+  representation with its own wording keeps it. The theme page says beforehand how many will be
+  affected.
+- **Every count is derived, never seeded**: progress on the consultee list, "x/y consultees" on
+  templates, the readiness tiles, sidebar statuses. `crRepView` in routes.js joins static content
+  with session state; build any new count from it.
+- **Statuses.** `draft` | `ready` | `changes` | `in-review`. A representation without a response
+  shows as Draft with "Response required" / "Officer and response required" under it. Only
+  `ready` with an officer can be sent; anything else not yet in review is "outstanding".
+- **Filters are sticky kit query fields**: `crTheme`, `crPolicy`, `crRespondentType`,
+  `crCommentType` for the side-by-side views (shared, so they carry between officer and
+  inspector; `session-data-defaults.js` opens them on the heritage/HE1 example), `crc*` for check
+  and send, and `crConsulteeSearch`. The selected representation and page are `_rep` and `_page`,
+  which the kit doesn't store.
+- **Tabs are links** (`crTabs` in `partials/macros.html`), not GOV.UK's JavaScript tabs, so each
+  view has a URL and works without JavaScript.
+- **JavaScript** reuses `initSelectAll` (bulk "Mark ready for review", now also refreshing on a
+  form reset for "Clear selection") and `initAutosubmit` (sort). `initTemplatePicker`
+  (`data-dlp-template-picker`) fills the response box from the chosen template; without it the box
+  starts with the template's wording, and saving an empty box uses the template.
+- **Deviations from the designs**, deliberately: policy references are the City Plan 2040's real
+  ones (as in `policies.js`) rather than the frames' placeholders, so "Design and heritage"
+  became the "Heritage and conservation" theme with HE1 "Managing Change to the Historic
+  Environment". The response box allows 1,500 characters, not 200, because the standard responses
+  are longer than that. The consultation history runs Scoping (Jan 2023) → proposed plan content
+  and evidence (May 2024) → proposed local plan (Jan–Mar 2026), which the frames had out of order.
+- **No "Regulation 18" or "Regulation 19".** Consultations use the new plan-making system's names:
+  Scoping consultation (before the 30-month clock, at least 21 days), Consultation on proposed plan
+  content and evidence (after Gateway 1, at least 6 weeks) and Consultation on the proposed local
+  plan (after Gateway 2, at least 8 weeks). The round ids are `scoping`, `plan-content` and
+  `proposed-plan`.
+- **Inert placeholders from the design:** the document viewer's "Download" and "Open in new
+  window". Uploads keep only the file name (the form isn't multipart).
 
 ## Keeping this file current
 

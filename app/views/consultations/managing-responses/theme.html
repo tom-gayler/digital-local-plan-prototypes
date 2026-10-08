@@ -1,0 +1,97 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% from "govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "consultations/managing-responses/partials/macros.html" import crTag %}
+
+{% set pageName = "Theme: " + theme.title %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "View and respond", href: "/consultations/managing-responses/view" },
+  { text: "By theme", href: "/consultations/managing-responses/view/themes" },
+  { text: theme.title }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl">Theme: {{ theme.title }}</h1>
+
+<div class="dlp-cr-stats">
+  <div class="dlp-cr-stats__item">
+    <p class="dlp-cr-stats__number">{{ theme.respondents }}</p>
+    <p class="dlp-cr-stats__label">respondents raised this theme</p>
+  </div>
+  <div class="dlp-cr-stats__item">
+    <p class="dlp-cr-stats__number">{{ totalRespondents }}</p>
+    <p class="dlp-cr-stats__label">total respondents to consultation</p>
+  </div>
+  <div class="dlp-cr-stats__item">
+    <p class="dlp-cr-stats__number">{{ percent }}%</p>
+    <p class="dlp-cr-stats__label">of all respondents</p>
+  </div>
+</div>
+
+<div class="dlp-cr-measure">
+  <h2 class="govuk-heading-m">Summary of responses</h2>
+  <p class="govuk-body">{{ theme.overview }}</p>
+
+  <h2 class="govuk-heading-m">Key concerns</h2>
+  <ul class="govuk-list govuk-list--bullet">
+    {% for concern in theme.keyConcerns %}
+      <li>{{ concern }}</li>
+    {% endfor %}
+  </ul>
+
+  <h2 class="govuk-heading-s govuk-!-margin-top-6 govuk-!-margin-bottom-1">Consultees who raised this theme</h2>
+  <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-2">Select a consultee to view response history</p>
+  <ul class="govuk-list dlp-cr-columns">
+    {% for consultee in consultees %}
+      <li><a class="govuk-link" href="/consultations/managing-responses/consultees/{{ consultee.id }}">{{ consultee.name }}</a></li>
+    {% endfor %}
+  </ul>
+</div>
+
+<form method="post" action="/consultations/managing-responses/themes/{{ theme.id }}" class="dlp-cr-measure govuk-!-margin-top-8" id="standard-response" novalidate>
+  <div class="dlp-cr-title-row">
+    <h2 class="govuk-heading-l govuk-!-margin-bottom-0">Standard response</h2>
+    {% if template %}
+      {{ crTag("Final" if template.status == "final" else "Draft", "green" if template.status == "final" else "orange") }}
+    {% endif %}
+  </div>
+
+  {{ govukTextarea({
+    id: "response",
+    name: "_response",
+    rows: 8,
+    value: template.text if template else "",
+    label: { text: "Standard response for " + (theme.title | lower), classes: "govuk-visually-hidden" },
+    hint: { text: "Draft a standard response for this theme. You can assign this response to all representations on this issue and check or edit before you publish your responses." },
+    errorMessage: { text: errors.response } if errors.response else undefined,
+    formGroup: { classes: "govuk-!-margin-top-4" }
+  }) }}
+
+  {# What assigning will do, worked out from the data, so the bulk action is never a surprise. #}
+  <div class="govuk-inset-text govuk-!-margin-top-0">
+    <p class="govuk-body govuk-!-margin-bottom-1">
+      This theme has <strong>{{ repCount }} representation{% if repCount != 1 %}s{% endif %}</strong> from named consultees.
+    </p>
+    <ul class="govuk-list govuk-list--bullet govuk-!-margin-bottom-0">
+      <li>{{ assignedCount }} {{ "uses" if assignedCount == 1 else "use" }} this standard response</li>
+      {% if ownCount %}<li>{{ ownCount }} {{ "has a response" if ownCount == 1 else "have responses" }} written for {{ "it" if ownCount == 1 else "them" }}, which assigning will not replace</li>{% endif %}
+      <li>{{ unassignedCount }} {{ "has" if unassignedCount == 1 else "have" }} no response yet{% if unassignedCount %}, and will get this one when you assign it{% endif %}</li>
+    </ul>
+  </div>
+
+  {% if template and template.status == "final" %}
+    <p class="govuk-body">Changes you save here apply to every representation this response is assigned to.</p>
+  {% endif %}
+
+  <div class="govuk-button-group">
+    <button type="submit" name="_action" value="assign" class="govuk-button" data-module="govuk-button">Assign this response to theme</button>
+    <button type="submit" name="_action" value="draft" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+      {{ "Save changes" if template and template.status == "final" else "Save draft" }}
+    </button>
+  </div>
+</form>
+
+{% endblock %}

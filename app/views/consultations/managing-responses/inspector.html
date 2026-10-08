@@ -1,0 +1,91 @@
+{% extends "consultations/managing-responses/partials/inspector-layout.html" %}
+
+{% from "govuk/components/character-count/macro.njk" import govukCharacterCount %}
+{% from "consultations/managing-responses/partials/macros.html" import crSideBySideFilters, crRepList, crComparison, crLpaResponse, crTag %}
+
+{% set pageName = "Review consultation responses" %}
+{% set base = "/consultations/managing-responses/inspector" %}
+{% set breadcrumbs = [
+  { text: "Examination", href: "/pins-view" },
+  { text: "Review consultation responses" }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl govuk-!-margin-bottom-4">Review consultation responses</h1>
+<p class="govuk-body dlp-cr-measure">
+  Compare current and historical representations with the authority's responses, and record
+  inspector comments for the examination.
+</p>
+
+{{ crSideBySideFilters(base, { filters: filters, options: options }) }}
+
+<div class="dlp-cr-section-head govuk-!-margin-top-8">
+  <div>
+    <h2 class="govuk-heading-l govuk-!-margin-bottom-1">Responses for examination</h2>
+    <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">{{ filterSummary }} · {{ matching | length }} matching response{% if matching | length != 1 %}s{% endif %}</p>
+  </div>
+  {% if matching | length %}
+    <p class="dlp-cr-reviewed">{{ reviewedCount }} of {{ matching | length }} reviewed</p>
+  {% endif %}
+</div>
+
+<div class="dlp-cr-workspace">
+  {{ crRepList(base, { matching: matching, pageItems: pageItems, page: page, pageCount: pageCount, firstItem: firstItem, lastItem: lastItem, selected: selected }, crDate) }}
+
+  <div class="dlp-cr-workspace__main">
+    {% if selected %}
+      {% set caption = { text: "Reviewed by inspector" if selected.inspectorReviewed else ("Ready for inspector" if selected.hasResponse else "Awaiting LPA response"), colour: "green" if selected.inspectorReviewed else ("blue" if selected.hasResponse else "grey") } %}
+      {% call crComparison(selected, caption, crDate) %}
+        {% if selected.hasResponse %}
+          {{ crLpaResponse(selected, crDate) }}
+        {% else %}
+          <div class="dlp-cr-notice">
+            <span class="dlp-cr-notice__icon" aria-hidden="true">!</span>
+            <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-0">The authority has not responded to this representation yet.</p>
+          </div>
+        {% endif %}
+      {% endcall %}
+
+      <form method="post" action="{{ base }}/{{ selected.id }}" class="dlp-cr-response-form" id="inspector-comments" novalidate>
+        <input type="hidden" name="_page" value="{{ page }}">
+        <div class="dlp-cr-response-form__head">
+          <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Inspector comments</h3>
+          <p class="dlp-cr-label govuk-!-margin-bottom-0">{{ selected.inspectorComments | length }} saved comment{% if selected.inspectorComments | length != 1 %}s{% endif %}</p>
+        </div>
+        <p class="govuk-body-s dlp-cr-muted">Comments are visible to the examination team and are not published with the LPA response.</p>
+
+        {% for comment in selected.inspectorComments %}
+          <div class="dlp-cr-comment">
+            <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-0">{{ comment.author }}</p>
+            <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-1">Saved {{ crDate(comment.date) }} · Examination team</p>
+            <p class="govuk-body govuk-!-margin-bottom-0">{{ comment.text }}</p>
+          </div>
+        {% endfor %}
+
+        {{ govukCharacterCount({
+          id: "inspector-comment",
+          name: "_comment",
+          rows: 5,
+          maxlength: 1000,
+          label: { text: "Add an inspector comment", classes: "govuk-!-font-weight-bold" },
+          hint: { text: "Record questions, soundness concerns or matters to raise at the hearing.", classes: "govuk-!-font-size-16" },
+          errorMessage: { text: errors.comment } if errors.comment else undefined,
+          formGroup: { classes: "govuk-!-margin-top-4" }
+        }) }}
+
+        <div class="govuk-button-group govuk-!-margin-bottom-0">
+          <button type="submit" name="_action" value="comment" class="govuk-button" data-module="govuk-button">Save comment</button>
+          <button type="submit" name="_action" value="reviewed" class="govuk-button govuk-button--secondary" data-module="govuk-button">
+            {{ "Mark response as not reviewed" if selected.inspectorReviewed else "Mark response as reviewed" }}
+          </button>
+          <a class="govuk-link govuk-link--no-visited-state" href="{{ base }}?_rep={{ selected.id }}&amp;_page={{ page }}">Cancel</a>
+        </div>
+      </form>
+    {% else %}
+      <p class="govuk-body">No representations match these filters. Try clearing one.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

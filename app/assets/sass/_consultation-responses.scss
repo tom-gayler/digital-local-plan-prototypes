@@ -1,0 +1,756 @@
+// Managing consultation responses (/consultations/managing-responses). Classes are dlp-cr-*.
+
+$dlp-cr-blue-tint: govuk-colour("blue", $variant: "tint-95");
+$dlp-cr-blue: govuk-colour("blue");
+$dlp-cr-green: govuk-colour("green");
+$dlp-cr-orange: govuk-colour("orange", $variant: "shade-25");
+$dlp-cr-red: govuk-colour("red");
+
+// --- Page frame ---
+
+// The sidebar layout is full-bleed; pages are held to a wide but bounded width so tables and
+// the side-by-side panels don't stretch across a large monitor.
+.dlp-cr-page {
+  max-width: 1100px;
+}
+
+.dlp-cr-measure {
+  max-width: 46em;
+}
+
+// The side navigation and the consultation card under it read as one surface. The nav normally
+// stretches to the full column height; here the column does, and the panels take the rest.
+.dlp-cr-sidebar {
+  background-color: $dlp-panel-background;
+
+  @include govuk-media-query($from: tablet) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+
+    .app-side-navigation {
+      min-height: 0;
+    }
+  }
+}
+
+.dlp-cr-sidebar-panels {
+  padding: 0 govuk-spacing(4) govuk-spacing(4);
+}
+
+.dlp-cr-card {
+  background: govuk-colour("white");
+  border: 1px solid $dlp-border-grey;
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-card__label,
+.dlp-cr-label {
+  @include govuk-font($size: 16, $weight: bold);
+  color: $dlp-muted-text;
+  letter-spacing: .04em;
+  margin: 0 0 govuk-spacing(1);
+  text-transform: uppercase;
+}
+
+.dlp-cr-card__title {
+  @include govuk-font($size: 16, $weight: bold);
+  margin: 0 0 govuk-spacing(1);
+}
+
+.dlp-cr-card__meta {
+  @include govuk-font($size: 16);
+  color: $dlp-muted-text;
+  margin: 0;
+}
+
+// --- Utilities ---
+
+.dlp-cr-muted {
+  color: $dlp-muted-text;
+}
+
+.dlp-cr-red {
+  color: $dlp-cr-red;
+}
+
+.dlp-cr-green {
+  color: $dlp-cr-green;
+}
+
+.dlp-cr-nowrap {
+  white-space: nowrap;
+}
+
+.dlp-cr-break {
+  overflow-wrap: anywhere;
+}
+
+.dlp-cr-block {
+  display: block;
+}
+
+.dlp-cr-full-width {
+  width: 100%;
+}
+
+.dlp-cr-col-theme {
+  width: 25%;
+}
+
+.dlp-cr-title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+}
+
+.dlp-cr-section-head {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(4);
+}
+
+// A POST action that looks like a link, e.g. "Remove" on an uploaded file.
+.dlp-cr-link-button {
+  @include govuk-font($size: 19);
+  background: none;
+  border: 0;
+  color: $govuk-link-colour;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: .1578em;
+
+  &:hover {
+    color: $govuk-link-hover-colour;
+  }
+
+  &:focus {
+    @include govuk-focused-text;
+  }
+}
+
+.dlp-cr-link-button--danger {
+  color: $govuk-error-colour;
+}
+
+// Status words in a table, coloured text rather than a tag (as the designs show them).
+.dlp-cr-status {
+  @include govuk-font($size: 19, $weight: bold);
+}
+
+.dlp-cr-status--green { color: $dlp-cr-green; }
+.dlp-cr-status--orange { color: $dlp-cr-orange; }
+.dlp-cr-status--blue { color: $dlp-cr-blue; }
+
+// --- Landing page ---
+
+.dlp-cr-entry {
+  margin-bottom: govuk-spacing(6);
+}
+
+.dlp-cr-entry__caption {
+  display: inline-block;
+  margin-left: govuk-spacing(2);
+}
+
+// --- Link tabs ---
+
+.dlp-cr-tabs {
+  border-bottom: 1px solid $dlp-border-grey;
+  margin-bottom: govuk-spacing(6);
+}
+
+.dlp-cr-tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0 0 -1px;
+  padding: 0;
+}
+
+.dlp-cr-tabs__link {
+  @include govuk-font($size: 19);
+  @include govuk-link-common;
+  @include govuk-link-style-no-visited-state;
+  border-top: 4px solid transparent;
+  display: block;
+  padding: govuk-spacing(2) govuk-spacing(4) govuk-spacing(3);
+}
+
+.dlp-cr-tabs__item--active .dlp-cr-tabs__link {
+  background: govuk-colour("white");
+  border: 1px solid $dlp-border-grey;
+  border-bottom-color: govuk-colour("white");
+  border-top: 4px solid $dlp-cr-blue;
+  color: $govuk-text-colour;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+// --- Search and pagination ---
+
+.dlp-cr-search__row {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+}
+
+.dlp-cr-pagination {
+  justify-content: center;
+}
+
+// --- Theme page ---
+
+.dlp-cr-stats {
+  background: $dlp-cr-blue-tint;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(6);
+  margin-bottom: govuk-spacing(6);
+  padding: govuk-spacing(4) govuk-spacing(5);
+}
+
+.dlp-cr-stats__item {
+  max-width: 12em;
+}
+
+.dlp-cr-stats__number {
+  @include govuk-font($size: 36, $weight: bold);
+  margin: 0;
+}
+
+.dlp-cr-stats__label {
+  @include govuk-font($size: 16);
+  color: $dlp-muted-text;
+  margin: 0;
+}
+
+.dlp-cr-columns {
+  @include govuk-media-query($from: tablet) {
+    column-count: 2;
+    column-gap: govuk-spacing(6);
+
+    li {
+      break-inside: avoid;
+    }
+  }
+}
+
+// --- Consultee page ---
+
+.dlp-cr-inline-facts {
+  @include govuk-font($size: 19);
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2) govuk-spacing(6);
+  margin: 0 0 govuk-spacing(6);
+
+  dt {
+    color: $dlp-muted-text;
+    display: inline;
+    font-weight: bold;
+  }
+
+  dd {
+    display: inline;
+    margin: 0;
+  }
+}
+
+.dlp-cr-rounds__row--selected {
+  background: $dlp-cr-blue-tint;
+}
+
+.dlp-cr-viewer {
+  border: 1px solid $dlp-border-grey;
+}
+
+.dlp-cr-viewer__bar {
+  align-items: center;
+  background: $dlp-panel-background;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  justify-content: space-between;
+  padding: govuk-spacing(2) govuk-spacing(3);
+}
+
+.dlp-cr-viewer__actions {
+  @include govuk-font($size: 16);
+  display: flex;
+  gap: govuk-spacing(3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dlp-cr-viewer__page {
+  max-height: 40rem;
+  overflow-y: auto;
+  padding: govuk-spacing(5) govuk-spacing(6);
+}
+
+.dlp-cr-figure {
+  border: 1px solid $dlp-border-grey;
+  background: govuk-colour("black", $variant: "tint-95");
+  margin: 0 0 govuk-spacing(4);
+  padding: govuk-spacing(3) govuk-spacing(4);
+}
+
+.dlp-cr-figure__bars {
+  align-items: flex-end;
+  display: flex;
+  gap: govuk-spacing(5);
+  height: 10rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dlp-cr-figure__bar-item {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: flex-end;
+  width: 5.5rem;
+}
+
+.dlp-cr-figure__bar {
+  display: block;
+  max-height: 70%;
+  width: 3rem;
+}
+
+.dlp-cr-figure__bar--1 { background: $dlp-cr-blue; }
+.dlp-cr-figure__bar--2 { background: govuk-colour("orange"); }
+.dlp-cr-figure__bar--3 { background: $dlp-cr-red; }
+
+.dlp-cr-figure__value {
+  @include govuk-font($size: 16, $weight: bold);
+}
+
+.dlp-cr-figure__label {
+  @include govuk-font($size: 16);
+  color: $dlp-muted-text;
+  min-height: 2.6em;
+  text-align: center;
+}
+
+.dlp-cr-assigned {
+  border-top: 1px solid $dlp-border-grey;
+  max-width: 46em;
+  padding: govuk-spacing(4) 0;
+}
+
+.dlp-cr-assigned__head,
+.dlp-cr-panel__title-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(2);
+}
+
+.dlp-cr-assigned__response {
+  background: $dlp-panel-background;
+  border-left: 4px solid $dlp-cr-blue;
+  padding: govuk-spacing(3);
+}
+
+// --- Filters ---
+
+.dlp-cr-filters {
+  background: $dlp-cr-blue-tint;
+  border: 1px solid $dlp-border-grey;
+  padding: govuk-spacing(4);
+}
+
+.dlp-cr-filters__head {
+  align-items: baseline;
+  display: flex;
+  gap: govuk-spacing(3);
+  justify-content: space-between;
+  margin-bottom: govuk-spacing(4);
+}
+
+.dlp-cr-filters__grid {
+  display: grid;
+  gap: 0 govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include govuk-media-query($from: desktop) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .govuk-form-group {
+    margin-bottom: govuk-spacing(4);
+  }
+}
+
+.dlp-cr-filters__grid--three {
+  @include govuk-media-query($from: desktop) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.dlp-cr-filters__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+}
+
+// --- Check and send for review ---
+
+.dlp-cr-tiles {
+  display: grid;
+  gap: govuk-spacing(3);
+  list-style: none;
+  margin: 0 0 govuk-spacing(4);
+  padding: 0;
+
+  @include govuk-media-query($from: tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include govuk-media-query($from: desktop) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.dlp-cr-tile {
+  border: 1px solid $dlp-border-grey;
+  border-top: 4px solid $dlp-border-grey;
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-tile__number {
+  @include govuk-font($size: 36, $weight: bold);
+  margin: 0;
+}
+
+.dlp-cr-tile__number--blue { color: $dlp-cr-blue; }
+.dlp-cr-tile__number--green { color: $dlp-cr-green; }
+.dlp-cr-tile__number--orange { color: $dlp-cr-orange; }
+.dlp-cr-tile__number--red { color: $dlp-cr-red; }
+
+.dlp-cr-tile__label {
+  @include govuk-font($size: 19, $weight: bold);
+  margin: 0;
+}
+
+.dlp-cr-tile__meta {
+  @include govuk-font($size: 16);
+  color: $dlp-muted-text;
+  margin: 0;
+}
+
+.dlp-cr-progress {
+  margin-bottom: govuk-spacing(6);
+}
+
+.dlp-cr-progress__labels {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dlp-cr-progress__track {
+  background: $dlp-border-grey;
+  height: 10px;
+}
+
+.dlp-cr-progress__bar {
+  background: $dlp-cr-green;
+  height: 100%;
+}
+
+.dlp-cr-sort {
+  align-items: center;
+  display: flex;
+  gap: govuk-spacing(2);
+}
+
+.dlp-cr-selection {
+  align-items: center;
+  background: $dlp-cr-blue-tint;
+  border: 1px solid $dlp-border-grey;
+  border-left: 4px solid $dlp-cr-blue;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(4);
+  margin-bottom: govuk-spacing(3);
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-check-table {
+  .govuk-table__header,
+  .govuk-table__cell {
+    vertical-align: top;
+  }
+}
+
+.dlp-cr-check-table__select {
+  width: 2.5rem;
+}
+
+.dlp-cr-send {
+  background: $dlp-panel-background;
+  border: 1px solid $dlp-border-grey;
+  margin-top: govuk-spacing(8);
+  padding: govuk-spacing(4);
+}
+
+.dlp-cr-warning {
+  background: govuk-colour("orange", $variant: "tint-95");
+  border-left: 5px solid govuk-colour("orange");
+  margin-bottom: govuk-spacing(4);
+  padding: govuk-spacing(3) govuk-spacing(4);
+}
+
+.dlp-cr-send__row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(3);
+}
+
+// --- Side-by-side views ---
+
+// The response list down the left, the comparison beside it. Stacks below desktop: two
+// columns of representation text and a list beside them don't fit.
+.dlp-cr-workspace {
+  display: grid;
+  gap: govuk-spacing(4);
+
+  @include govuk-media-query($from: desktop) {
+    align-items: start;
+    grid-template-columns: 16rem minmax(0, 1fr);
+  }
+}
+
+.dlp-cr-workspace__main {
+  min-width: 0;
+}
+
+.dlp-cr-replist {
+  border: 1px solid $dlp-border-grey;
+}
+
+.dlp-cr-replist__head {
+  background: $dlp-cr-blue-tint;
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-replist__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dlp-cr-replist__item {
+  border-top: 1px solid $dlp-border-grey;
+}
+
+.dlp-cr-replist__link {
+  @include govuk-font($size: 16);
+  border-left: 4px solid transparent;
+  color: $govuk-text-colour;
+  display: block;
+  padding: govuk-spacing(3);
+  text-decoration: none;
+
+  &:hover {
+    background: $dlp-panel-background;
+  }
+
+  &:focus {
+    @include govuk-focused-text;
+  }
+}
+
+.dlp-cr-replist__item--selected .dlp-cr-replist__link {
+  background: $dlp-cr-blue-tint;
+  border-left-color: $dlp-cr-blue;
+}
+
+.dlp-cr-replist__top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.dlp-cr-replist__id {
+  color: $dlp-cr-blue;
+  font-weight: bold;
+}
+
+.dlp-cr-replist__date,
+.dlp-cr-replist__type {
+  color: $dlp-muted-text;
+}
+
+.dlp-cr-replist__name {
+  display: block;
+  font-weight: bold;
+  margin-top: govuk-spacing(1);
+}
+
+.dlp-cr-replist__type,
+.dlp-cr-replist__comment {
+  display: block;
+}
+
+.dlp-cr-replist__comment {
+  font-weight: bold;
+  margin-top: govuk-spacing(1);
+}
+
+.dlp-cr-type--objection { color: $dlp-cr-red; }
+.dlp-cr-type--support { color: $dlp-cr-green; }
+.dlp-cr-type--neutral { color: $govuk-text-colour; }
+
+.dlp-cr-replist__pager {
+  @include govuk-font($size: 16);
+  border-top: 1px solid $dlp-border-grey;
+  display: flex;
+  justify-content: space-between;
+  padding: govuk-spacing(2) govuk-spacing(3);
+}
+
+.dlp-cr-compare__head {
+  border-bottom: 3px solid $dlp-cr-blue;
+  margin-bottom: govuk-spacing(4);
+  padding-bottom: govuk-spacing(2);
+}
+
+.dlp-cr-compare {
+  display: grid;
+  gap: govuk-spacing(4);
+
+  @include govuk-media-query($from: tablet) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dlp-cr-compare__column {
+  display: flex;
+  flex-direction: column;
+  gap: govuk-spacing(3);
+}
+
+.dlp-cr-rep {
+  border: 1px solid $dlp-border-grey;
+}
+
+.dlp-cr-rep__head {
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-rep--current .dlp-cr-rep__head {
+  background: $dlp-cr-blue-tint;
+}
+
+.dlp-cr-rep--historical .dlp-cr-rep__head {
+  background: $dlp-panel-background;
+}
+
+.dlp-cr-rep__body {
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-tags {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  margin: 0;
+}
+
+.dlp-cr-facts {
+  border-bottom: 1px solid $dlp-border-grey;
+  margin-bottom: govuk-spacing(3);
+  padding-bottom: govuk-spacing(2);
+}
+
+.dlp-cr-change {
+  @include govuk-font($size: 16);
+  background: $dlp-highlight-background;
+  border-left: 4px solid govuk-colour("yellow");
+  margin: 0 0 govuk-spacing(3);
+  padding: govuk-spacing(2) govuk-spacing(3);
+}
+
+.dlp-cr-panel {
+  border: 1px solid $dlp-border-grey;
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-panel--response,
+.dlp-cr-panel--historical {
+  background: $dlp-cr-blue-tint;
+}
+
+.dlp-cr-notice {
+  align-items: flex-start;
+  background: $dlp-highlight-background;
+  display: flex;
+  gap: govuk-spacing(2);
+  padding: govuk-spacing(3);
+}
+
+.dlp-cr-notice__icon {
+  @include govuk-font($size: 16, $weight: bold);
+  border: 2px solid currentcolor;
+  border-radius: 50%;
+  flex: none;
+  height: 1.25rem;
+  line-height: 1.1rem;
+  text-align: center;
+  width: 1.25rem;
+}
+
+.dlp-cr-response-form {
+  border: 2px solid $dlp-border-grey;
+  margin-top: govuk-spacing(5);
+  padding: govuk-spacing(4);
+}
+
+.dlp-cr-response-form__head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(2);
+  justify-content: space-between;
+}
+
+.dlp-cr-preview {
+  border: 2px dashed $dlp-cr-blue;
+  margin-top: govuk-spacing(5);
+  padding: govuk-spacing(4);
+}
+
+.dlp-cr-reviewed {
+  @include govuk-font($size: 16, $weight: bold);
+  background: govuk-colour("green", $variant: "tint-95");
+  border: 1px solid govuk-colour("green", $variant: "tint-50");
+  color: $dlp-cr-green;
+  margin: 0;
+  padding: govuk-spacing(1) govuk-spacing(3);
+}
+
+.dlp-cr-comment {
+  background: $dlp-cr-blue-tint;
+  border-left: 4px solid $dlp-cr-blue;
+  margin-top: govuk-spacing(3);
+  padding: govuk-spacing(3);
+}

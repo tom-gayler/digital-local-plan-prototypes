@@ -1,0 +1,73 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% set pageName = "Import consultation" %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "Import consultation" }
+] %}
+
+{% block pageContent %}
+
+<h1 class="govuk-heading-xl">Import consultation</h1>
+
+{#
+  The form isn't multipart, so the browser sends only the chosen file's name, and that's all the
+  prototype keeps. Uploading adds a row; nothing is read from the file.
+#}
+<form method="post" action="/consultations/managing-responses/import" class="dlp-cr-measure" novalidate>
+  <div class="govuk-form-group {%- if errors.file %} govuk-form-group--error{% endif %}">
+    <h2 class="govuk-label-wrapper">
+      <label class="govuk-label govuk-label--m" for="file">Upload a file</label>
+    </h2>
+    <div class="govuk-hint" id="file-hint">
+      Upload the consultation document in CSV format. The file must be smaller than 10MB.
+    </div>
+    {% if errors.file %}
+      <p class="govuk-error-message" id="file-error"><span class="govuk-visually-hidden">Error:</span> {{ errors.file }}</p>
+    {% endif %}
+    <input class="govuk-file-upload {%- if errors.file %} govuk-file-upload--error{% endif %}" id="file" name="_file" type="file" accept=".csv"
+           aria-describedby="file-hint{% if errors.file %} file-error{% endif %}">
+  </div>
+  {{ govukButton({ text: "Upload file" }) }}
+</form>
+
+<h2 class="govuk-heading-l govuk-!-margin-top-4">Uploaded files</h2>
+
+{% if data.uploads | length %}
+  <table class="govuk-table">
+    <caption class="govuk-table__caption govuk-visually-hidden">Uploaded files</caption>
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header">Title</th>
+        <th scope="col" class="govuk-table__header">File type</th>
+        <th scope="col" class="govuk-table__header">Size</th>
+        <th scope="col" class="govuk-table__header">Date uploaded</th>
+        <th scope="col" class="govuk-table__header">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for upload in data.uploads %}
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell">
+            <a class="govuk-link" href="/consultations/managing-responses/view">{{ upload.title }}</a>
+          </td>
+          <td class="govuk-table__cell">CSV</td>
+          <td class="govuk-table__cell dlp-cr-nowrap">{{ upload.size }}</td>
+          <td class="govuk-table__cell dlp-cr-nowrap">{{ crDate(upload.date) }}</td>
+          <td class="govuk-table__cell">
+            <form method="post" action="/consultations/managing-responses/import/{{ upload.id }}/remove" novalidate>
+              <button type="submit" class="dlp-cr-link-button dlp-cr-link-button--danger">
+                Remove<span class="govuk-visually-hidden"> {{ upload.title }}</span>
+              </button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="govuk-body">No files have been uploaded yet.</p>
+{% endif %}
+
+{% endblock %}

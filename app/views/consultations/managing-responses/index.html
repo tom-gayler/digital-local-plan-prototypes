@@ -1,0 +1,75 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName = "Managing consultation responses" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <a class="govuk-back-link" href="/consultations">Back to Consultations</a>
+
+    <h1 class="govuk-heading-xl">Managing consultation responses</h1>
+
+    <p class="govuk-body">
+      We learnt from our research that officers spend a lot of time manually sorting
+      representations from consultees and members of the public, and then assigning a response to
+      each individual representation on each issue. This prototype tests three ideas:
+    </p>
+    <ul class="govuk-list govuk-list--bullet">
+      <li>responding to common issues in bulk, by theme</li>
+      <li>better filtering and sorting, so officers and managers can check every representation has an appropriate response</li>
+      <li>seeing a consultee's history side by side, so the authority responds consistently</li>
+    </ul>
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+    <h2 class="govuk-heading-l">Respond to a consultation</h2>
+    <p class="govuk-body">
+      The policy officer's journey through the City Plan 2040 consultation on the proposed local plan: import
+      the responses, respond by consultee or by theme, manage the standard responses, then check
+      them and send them for review.
+    </p>
+    <a class="govuk-button" data-module="govuk-button" href="/consultations/managing-responses/import">Start as the policy officer</a>
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+    <h2 class="govuk-heading-l">Compare representations side by side</h2>
+    <p class="govuk-body">
+      An alternative way to view and respond: filter the representations, then read each one beside
+      the same respondent's earlier representation and the response the authority published to it.
+    </p>
+
+    <div class="dlp-cr-entry">
+      <h3 class="govuk-heading-m">Policy officer view</h3>
+      <p class="govuk-body">
+        Draft the authority's response to a representation, starting from a standard response or
+        writing your own, with the earlier exchange beside it.
+      </p>
+      <a class="govuk-button govuk-button--secondary" data-module="govuk-button" href="/consultations/managing-responses/officer">Compare as the policy officer</a>
+    </div>
+
+    <div class="dlp-cr-entry">
+      <h3 class="govuk-heading-m">Inspector view <span class="govuk-caption-m dlp-cr-entry__caption">External user</span></h3>
+      <p class="govuk-body">
+        What an inspector sees at examination: each representation with the authority's current
+        and earlier responses, and somewhere to record comments for the hearing. The inspector is
+        outside the council, so this screen has no internal navigation.
+      </p>
+      <a class="govuk-button govuk-button--secondary" data-module="govuk-button" href="/consultations/managing-responses/inspector">Review as the inspector</a>
+    </div>
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+    <h2 class="govuk-heading-m">Start again</h2>
+    <p class="govuk-body">
+      Put every response, template and comment back the way the prototype started.
+    </p>
+    <form method="post" action="/consultations/managing-responses/reset" novalidate>
+      <button type="submit" class="govuk-button govuk-button--warning" data-module="govuk-button">Reset the prototype</button>
+    </form>
+
+  </div>
+</div>
+
+{% endblock %}

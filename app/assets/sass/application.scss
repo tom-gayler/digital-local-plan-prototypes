@@ -1234,3 +1234,6 @@ $dlp-confidence-low: govuk-colour("orange");
 
 // Managing commissioned evidence.
 @import "commissioned-evidence";
+
+// Managing consultation responses. Uses the variables above.
+@import "consultation-responses";

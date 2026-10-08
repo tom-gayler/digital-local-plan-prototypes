@@ -45,6 +45,7 @@ window.GOVUKPrototypeKit.documentReady(() => {
   document.querySelectorAll('[data-dlp-suggest]').forEach(safeInit(initSuggestSearch))
   document.querySelectorAll('[data-dlp-autosubmit]').forEach(safeInit(initAutosubmit))
   document.querySelectorAll('[data-dlp-select-all]').forEach(safeInit(initSelectAll))
+  document.querySelectorAll('[data-dlp-template-picker]').forEach(safeInit(initTemplatePicker))
 
   // Opens the evidence search dialog from a button elsewhere on the page — in the v2 writer,
   // "+ Add source" in the sources rail. The search box lives inside the dialog, so this opens
@@ -2362,5 +2363,37 @@ function initSelectAll (root) {
   }
 
   items.forEach(item => item.addEventListener('change', update))
+  // A reset button ("Clear selection") unticks everything without firing change events, and the
+  // form's state only settles after the reset event itself, hence the deferral.
+  const form = root.tagName === 'FORM' ? root : root.querySelector('form')
+  if (form) form.addEventListener('reset', () => setTimeout(update))
   update()
+}
+
+// --- Fill a response from a chosen template --------------------------------------------------
+//
+// Choosing an option in [data-dlp-template-select] puts its data-text into the
+// [data-dlp-template-text] textarea. "Write my own" (no data-text) clears the box only if it still
+// holds a template's wording untouched, so it never throws away what someone has typed. The
+// textarea's input event is fired so GOV.UK's character count keeps up.
+function initTemplatePicker (root) {
+  const select = root.querySelector('[data-dlp-template-select]')
+  const textarea = root.querySelector('[data-dlp-template-text]')
+  if (!select || !textarea) return
+
+  const templateTexts = Array.prototype.map.call(select.options, option => option.dataset.text).filter(Boolean)
+
+  select.addEventListener('change', () => {
+    const option = select.options[select.selectedIndex]
+    const text = option && option.dataset.text
+    if (text) {
+      textarea.value = text
+    } else if (templateTexts.includes(textarea.value.trim())) {
+      textarea.value = ''
+    } else {
+      return
+    }
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    textarea.dispatchEvent(new Event('keyup', { bubbles: true }))
+  })
 }

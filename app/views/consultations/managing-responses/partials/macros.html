@@ -1,0 +1,209 @@
+{#
+  Shared pieces of Managing consultation responses. The side-by-side views (officer.html,
+  inspector.html) are built almost entirely from these, so the two differ only in what sits
+  under the comparison: a response form for the officer, comments for the inspector.
+#}
+
+{% macro crTag(text, colour, classes) %}
+  <strong class="govuk-tag govuk-tag--{{ colour }}{% if classes %} {{ classes }}{% endif %}">{{ text }}</strong>
+{% endmacro %}
+
+{% macro crConsultationCard(consultation) %}
+  <div class="dlp-cr-card">
+    <p class="dlp-cr-card__label">Current consultation</p>
+    <p class="dlp-cr-card__title">{{ consultation.title }}</p>
+    <p class="dlp-cr-card__meta">{{ consultation.dates }}</p>
+  </div>
+{% endmacro %}
+
+{% macro crSelect(id, name, label, options, selected, allLabel) %}
+  <div class="govuk-form-group">
+    <label class="govuk-label govuk-!-font-weight-bold" for="{{ id }}">{{ label }}</label>
+    <select class="govuk-select dlp-cr-full-width" id="{{ id }}" name="{{ name }}">
+      <option value="">{{ allLabel }}</option>
+      {% for option in options %}
+        <option value="{{ option.value }}" {%- if option.value == selected %} selected{% endif %}>{{ option.text }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{#
+  The four filters both side-by-side views share. They're the kit's sticky query fields
+  (crTheme …), so they carry between the officer and the inspector view as well.
+#}
+{% macro crSideBySideFilters(action, view) %}
+  <form method="get" action="{{ action }}" class="dlp-cr-filters" novalidate>
+    <div class="dlp-cr-filters__head">
+      <h2 class="govuk-heading-m govuk-!-margin-bottom-0">Filter responses</h2>
+      <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">4 filters available</p>
+    </div>
+    <div class="dlp-cr-filters__grid">
+      {{ crSelect("cr-theme", "crTheme", "Theme", view.options.themes, view.filters.theme, "All themes") }}
+      {{ crSelect("cr-policy", "crPolicy", "Policy title", view.options.policies, view.filters.policy, "All policy titles") }}
+      {{ crSelect("cr-respondent-type", "crRespondentType", "Respondent type", view.options.respondentTypes, view.filters.respondentType, "All respondent types") }}
+      {{ crSelect("cr-comment-type", "crCommentType", "Comment type", view.options.commentTypes, view.filters.commentType, "All comment types") }}
+    </div>
+    <div class="govuk-button-group govuk-!-margin-bottom-0">
+      <button type="submit" class="govuk-button govuk-!-margin-bottom-0" data-module="govuk-button">Apply filters</button>
+      <a class="govuk-link govuk-link--no-visited-state" href="{{ action }}?crTheme=&amp;crPolicy=&amp;crRespondentType=&amp;crCommentType=">Clear filters</a>
+    </div>
+  </form>
+{% endmacro %}
+
+{# The list down the left of the side-by-side views. #}
+{% macro crRepList(baseUrl, view, crDate) %}
+  <nav class="dlp-cr-replist" aria-label="Matching responses">
+    <div class="dlp-cr-replist__head">
+      <h3 class="govuk-heading-s govuk-!-margin-bottom-1">{{ view.matching | length }} response{% if view.matching | length != 1 %}s{% endif %}</h3>
+      <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">
+        {% if view.matching | length %}Showing {{ view.firstItem }}–{{ view.lastItem }} · sorted newest first{% else %}None match these filters{% endif %}
+      </p>
+    </div>
+    <ul class="dlp-cr-replist__items">
+      {% for rep in view.pageItems %}
+        {% set isSelected = view.selected and rep.id == view.selected.id %}
+        <li class="dlp-cr-replist__item{% if isSelected %} dlp-cr-replist__item--selected{% endif %}">
+          <a class="dlp-cr-replist__link" href="{{ baseUrl }}?_rep={{ rep.id }}&amp;_page={{ view.page }}" {%- if isSelected %} aria-current="true"{% endif %}>
+            <span class="dlp-cr-replist__top">
+              <span class="dlp-cr-replist__id">{{ rep.id }}</span>
+              <span class="dlp-cr-replist__date">{{ crDate(rep.date) }}</span>
+            </span>
+            <span class="dlp-cr-replist__name">{{ rep.consulteeName }}</span>
+            <span class="dlp-cr-replist__type">{{ rep.respondentType }}</span>
+            <span class="dlp-cr-replist__comment dlp-cr-type--{{ rep.commentType | lower }}">{{ rep.commentType }}</span>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    {% if view.pageCount > 1 %}
+      <div class="dlp-cr-replist__pager">
+        {% if view.page > 1 %}
+          <a class="govuk-link govuk-link--no-visited-state" href="{{ baseUrl }}?_page={{ view.page - 1 }}">‹ Previous<span class="govuk-visually-hidden"> page of responses</span></a>
+        {% else %}<span></span>{% endif %}
+        {% if view.page < view.pageCount %}
+          <a class="govuk-link govuk-link--no-visited-state govuk-!-font-weight-bold" href="{{ baseUrl }}?_page={{ view.page + 1 }}">Next<span class="govuk-visually-hidden"> page of responses</span> ›</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </nav>
+{% endmacro %}
+
+{# Respondent, policy and theme: the same block heads both representations. #}
+{% macro crRepFacts(rep, policyRef, policyTitle) %}
+  <div class="dlp-cr-facts">
+    <p class="dlp-cr-label">Respondent</p>
+    <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-0">{{ rep.consulteeName }}</p>
+    <p class="govuk-body-s dlp-cr-muted">{{ rep.respondentType }}</p>
+  </div>
+  <div class="dlp-cr-facts">
+    <p class="govuk-body-s govuk-!-margin-bottom-1">Policy: {{ policyRef }} — {{ policyTitle }}</p>
+    <p class="govuk-body-s govuk-!-margin-bottom-0">Theme: {{ rep.themeTitle }}</p>
+  </div>
+{% endmacro %}
+
+{% macro crLpaResponse(rep, crDate) %}
+  <section class="dlp-cr-panel dlp-cr-panel--response" aria-labelledby="current-lpa-response">
+    <div class="dlp-cr-panel__title-row">
+      <h4 class="govuk-heading-s govuk-!-margin-bottom-0" id="current-lpa-response">Current LPA response</h4>
+      {{ crTag(rep.statusLabel, rep.statusColour) }}
+    </div>
+    <p class="govuk-body-s dlp-cr-muted">
+      Updated {{ crDate(rep.updated) }}{% if rep.officer %} · Officer: {{ rep.officer }}{% endif %}
+      · {% if rep.responseSource == "template" %}Standard response for {{ rep.themeTitle | lower }}{% else %}Written for this representation{% endif %}
+    </p>
+    <p class="govuk-body-s govuk-!-margin-bottom-0">{{ rep.responseText }}</p>
+  </section>
+{% endmacro %}
+
+{#
+  The current representation beside the respondent's earlier one, and the LPA's published reply
+  to that. `caption` is what the status tag on the current one says, which differs by viewer.
+#}
+{% macro crComparison(rep, caption, crDate) %}
+  <div class="dlp-cr-compare__head">
+    <h3 class="govuk-heading-m govuk-!-margin-bottom-1">{{ rep.consulteeName }} · {{ rep.id }}</h3>
+    <p class="govuk-body-s dlp-cr-muted govuk-!-margin-bottom-0">
+      {% if rep.previous %}Representation on the proposed local plan compared with the related representation on the proposed plan content and evidence{% else %}Representation on the proposed local plan. There is no earlier representation from this respondent on this policy{% endif %}
+    </p>
+  </div>
+
+  <div class="dlp-cr-compare">
+    <div class="dlp-cr-compare__column">
+      <section class="dlp-cr-rep dlp-cr-rep--current" aria-labelledby="current-rep-heading">
+        <div class="dlp-cr-rep__head">
+          <h4 class="govuk-heading-s govuk-!-margin-bottom-1" id="current-rep-heading">Current representation</h4>
+          <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-2">Submitted {{ crDate(rep.date) }}</p>
+          <p class="dlp-cr-tags">
+            {{ crTag(rep.commentType, rep.commentColour) }}
+            {{ crTag(caption.text, caption.colour) }}
+            <span class="dlp-cr-muted govuk-body-s govuk-!-margin-bottom-0">{{ rep.id }}</span>
+          </p>
+        </div>
+        <div class="dlp-cr-rep__body">
+          {{ crRepFacts(rep, rep.policyRef, rep.policyTitle) }}
+          {% if rep.changeNote %}
+            <p class="dlp-cr-change">{{ rep.changeNote }}</p>
+          {% endif %}
+          <p class="govuk-body-s govuk-!-margin-bottom-0">{{ rep.text }}</p>
+        </div>
+      </section>
+      {% if caller %}{{ caller() }}{% endif %}
+    </div>
+
+    <div class="dlp-cr-compare__column">
+      {% if rep.previous %}
+        <section class="dlp-cr-rep dlp-cr-rep--historical" aria-labelledby="historical-rep-heading">
+          <div class="dlp-cr-rep__head">
+            <h4 class="govuk-heading-s govuk-!-margin-bottom-1" id="historical-rep-heading">Historical representation</h4>
+            <p class="govuk-body-s govuk-!-font-weight-bold govuk-!-margin-bottom-2">Submitted {{ crDate(rep.previous.date) }}</p>
+            <p class="dlp-cr-tags">
+              {{ crTag(rep.previous.commentType, "grey") }}
+              {{ crTag("Closed", "blue") }}
+              <span class="dlp-cr-muted govuk-body-s govuk-!-margin-bottom-0">{{ rep.previous.id }}</span>
+            </p>
+          </div>
+          <div class="dlp-cr-rep__body">
+            {{ crRepFacts(rep, rep.previous.policyRef, rep.previous.policyTitle) }}
+            <p class="govuk-body-s govuk-!-margin-bottom-0">{{ rep.previous.text }}</p>
+          </div>
+        </section>
+        <section class="dlp-cr-panel dlp-cr-panel--historical" aria-labelledby="historical-lpa-heading">
+          <div class="dlp-cr-panel__title-row">
+            <h4 class="govuk-heading-s govuk-!-margin-bottom-0" id="historical-lpa-heading">Historical LPA response</h4>
+            {{ crTag("Published", "green") }}
+          </div>
+          <p class="govuk-body-s dlp-cr-muted">Published {{ crDate(rep.previous.lpaResponse.published) }} · Officer: {{ rep.previous.lpaResponse.officer }}</p>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">{{ rep.previous.lpaResponse.text }}</p>
+        </section>
+      {% else %}
+        <section class="dlp-cr-rep dlp-cr-rep--historical dlp-cr-rep--empty" aria-labelledby="historical-rep-heading">
+          <div class="dlp-cr-rep__head">
+            <h4 class="govuk-heading-s govuk-!-margin-bottom-0" id="historical-rep-heading">Historical representation</h4>
+          </div>
+          <div class="dlp-cr-rep__body">
+            <p class="govuk-body-s govuk-!-margin-bottom-0">
+              {{ rep.consulteeName }} did not make a representation on {{ rep.policyRef }} in the consultation on proposed plan content and evidence, so there is nothing earlier to compare.
+            </p>
+          </div>
+        </section>
+      {% endif %}
+    </div>
+  </div>
+{% endmacro %}
+
+{#
+  Tabs that are links to separate pages rather than GOV.UK's JavaScript tabs, so each view has
+  its own URL and works without JavaScript. items: [{ text, href, active }]
+#}
+{% macro crTabs(label, items) %}
+  <nav class="dlp-cr-tabs" aria-label="{{ label }}">
+    <ul class="dlp-cr-tabs__list">
+      {% for item in items %}
+        <li class="dlp-cr-tabs__item{% if item.active %} dlp-cr-tabs__item--active{% endif %}">
+          <a class="dlp-cr-tabs__link" href="{{ item.href }}" {%- if item.active %} aria-current="page"{% endif %}>{{ item.text }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </nav>
+{% endmacro %}

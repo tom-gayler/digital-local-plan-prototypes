@@ -1,0 +1,23 @@
+{% extends "consultations/managing-responses/partials/layout.html" %}
+
+{% set pageName = "Review responses" %}
+{% set breadcrumbs = [
+  { text: "Consultations", href: "/consultations" },
+  { text: "Manage consultation responses", href: "/consultations/managing-responses" },
+  { text: "Review responses" }
+] %}
+
+{% block pageContent %}
+
+<div class="dlp-cr-measure">
+  <h1 class="govuk-heading-xl">Review responses</h1>
+  <p class="govuk-body">
+    This is where the Planning Policy review team would approve or return the responses sent to
+    them. It hasn't been designed yet, so it isn't part of this prototype.
+  </p>
+  <p class="govuk-body">
+    <a class="govuk-link" href="/consultations/managing-responses/check">Go to Check and send for review</a>
+  </p>
+</div>
+
+{% endblock %}

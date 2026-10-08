@@ -1,0 +1,42 @@
+{% extends "layouts/main.html" %}
+
+{% set pageName="Consultations" %}
+
+{% block content %}
+
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-two-thirds">
+
+    <a class="govuk-back-link" href="/">Back to prototypes</a>
+
+    <h1 class="govuk-heading-xl">Consultations</h1>
+
+    <p class="govuk-body">
+      Prototypes exploring how officers handle the representations made to a consultation on the
+      plan: sorting them, responding to them consistently, and checking the responses before they
+      are published. Pick one to try it out.
+    </p>
+
+    <hr class="govuk-section-break govuk-section-break--visible govuk-section-break--m" />
+
+    <h2 class="govuk-heading-l">Current prototypes</h2>
+    <p class="govuk-body">
+      These are the most recent prototypes we've developed. We'll be testing these over the next
+      few weeks.
+    </p>
+
+    <div class="govuk-!-margin-bottom-6">
+      <h3 class="govuk-heading-m">
+        <a class="govuk-link" href="/consultations/managing-responses">Managing consultation responses</a>
+      </h3>
+      <p class="govuk-body">
+        Import a consultation's representations, respond to common issues in bulk by theme, check
+        responses with better filtering and sorting, and compare a respondent's representation with
+        what they said before.
+      </p>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
